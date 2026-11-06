@@ -18,7 +18,9 @@ const PREFS_KEY = `${STORAGE_PREFIX}.prefs`;
 const LOGIN_EMAIL_KEY = `${STORAGE_PREFIX}.loginEmail`;
 const VIEWS = ['week', 'month'];
 const PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948', '#00a3b4', '#52514e'];
-const HOUR_PX = 44;
+// Height of one hour in the week view; taller on a phone, where the columns are narrow.
+const narrow = matchMedia('(max-width: 600px)');
+const hourPx = () => (narrow.matches ? 60 : 44);
 const wide = () => matchMedia('(min-width: 700px)').matches;
 
 const state = {
@@ -251,6 +253,7 @@ function renderWeek() {
     endH = Math.max(endH, Math.ceil(minutes(o.end) / 60));
   }
   const hours = endH - startH;
+  const HOUR_PX = hourPx();
 
   const head = days.map((d, i) => `<button type="button" class="wk-day${i > 4 ? ' we' : ''}${d === t ? ' today' : ''}" data-day="${d}">
       <span class="wd">${DAY_SHORT[i]}</span><span class="dn">${Number(d.slice(8))}</span></button>`).join('');
@@ -263,11 +266,16 @@ function renderWeek() {
       const top = ((minutes(o.start) - startH * 60) / 60) * HOUR_PX;
       const h = Math.max(((minutes(o.end) - minutes(o.start)) / 60) * HOUR_PX, 22);
       const w = 100 / o.lanes;
-      const short = h < 36;
+      // Room inside the block: title lines of 13px, then rows of 15px with the time and who.
+      // A second row (for who) only when two title lines still fit above it.
+      const room = h - 3;
+      const short = room < 28;
+      const rl = room >= 56 ? 2 : 1;
+      const tl = Math.min(3, Math.floor((room - rl * 15) / 13));
       return `<button type="button" class="ev${short ? ' short' : ''}${fade(o.event)}${off(o.event)}" data-id="${o.event.id}" data-date="${d}"
-        style="top:${top}px;height:${h - 2}px;left:calc(${o.lane * w}% + 1px);width:calc(${w}% - 2px);--c:${colorOf(o.event)}">
-        ${short ? `<span class="ev-row">${faces(o.event, true)}<span class="ev-t">${esc(o.event.title)}</span></span>`
-    : `<span class="ev-t">${esc(o.event.title)}</span><span class="ev-s">${o.start}</span>${faces(o.event)}`}</button>`;
+        style="top:${top}px;height:${h - 2}px;left:calc(${o.lane * w}% + 1px);width:calc(${w}% - 2px);--c:${colorOf(o.event)};--tl:${tl};--rl:${rl}">
+        ${short ? `<span class="ev-row"><span class="ev-s">${o.start}</span><span class="ev-t">${esc(o.event.title)}</span></span>`
+    : `<span class="ev-t">${esc(o.event.title)}</span><span class="ev-s"><span>${o.start}</span>${faces(o.event, true)}</span>`}</button>`;
     }).join('');
     let now = '';
     if (d === t) {
@@ -875,7 +883,7 @@ function init() {
       // Tapping an empty hour starts a new activity at that half hour.
       const grid = col.closest('.wk-grid');
       const y = e.clientY - col.getBoundingClientRect().top;
-      const m = Math.max(0, Math.floor(((y / HOUR_PX) * 60) / 30) * 30) + Number(grid.dataset.start) * 60;
+      const m = Math.max(0, Math.floor(((y / hourPx()) * 60) / 30) * 30) + Number(grid.dataset.start) * 60;
       return openEvent({ date: col.dataset.day, start: `${pad(Math.min(23, Math.floor(m / 60)))}:${pad(m % 60)}` });
     }
   });
@@ -949,6 +957,8 @@ function init() {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && supa.signedIn() && Date.now() - state.lastFetch > 60000) fetchData({ quiet: true });
   });
+  // Phone and wider screens use different hour heights.
+  narrow.addEventListener('change', () => { if (state.view === 'week' && state.data) render(); });
   // Keep the "now" line moving.
   setInterval(() => { if (state.view === 'week' && state.data && !document.querySelector('dialog[open]')) render(); }, 5 * 60000);
 
