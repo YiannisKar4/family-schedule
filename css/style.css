@@ -243,16 +243,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.4); }
   dialog { width: 100vw; max-width: 100vw; margin: auto 0 0; border-radius: 18px 18px 0 0; max-height: 92vh; }
   /* Sit just above the keyboard or the date/time wheel, and fit in what is left. */
   dialog { margin-bottom: var(--vv-below, 0px); max-height: min(92dvh, calc(var(--vv-h, 100dvh) - 12px)); }
-  /* When the keyboard opens, the window rises with it instead of jumping. */
-  dialog { transition: margin-bottom 0.28s cubic-bezier(.2, .8, .2, 1), max-height 0.28s cubic-bezier(.2, .8, .2, 1); }
-  /* While the keyboard slides up, iPhone pans the screen and shows what lies under the window
-     (the bare page, a bright flash). The window's own colour continues down there instead. */
-  dialog:not(.ask) {
-    box-shadow: 0 150px 0 var(--surface-1), 0 300px 0 var(--surface-1), 0 450px 0 var(--surface-1), 0 20px 60px rgba(0, 0, 0, 0.3);
-  }
 }
-/* The dimmed background reaches below the screen too, for the same reason. */
-dialog::backdrop { bottom: -100vh; }
 .dlg { --dlg-top: 18px; padding: var(--dlg-top) 16px 16px; }
 .dlg-head { display: flex; align-items: center; margin-bottom: 12px; }
 /* The title and the close button stay in sight while the window scrolls. */
@@ -823,5 +814,5 @@ dialog.closing::backdrop { animation: fade-out 0.17s ease-in forwards; }
 @media (prefers-reduced-motion: reduce) {
   dialog[open], dialog[open]::backdrop, dialog.closing, dialog.closing::backdrop,
   #time-pair, #end-date-box, #repeat-box, .dp-day.sel span { animation: none !important; }
-  dialog, .btn, .icon-btn, .seg button, .pick, .day-picks button, .tab, .fab, .pick-field, .tp-item { transition: none; }
+  .btn, .icon-btn, .seg button, .pick, .day-picks button, .tab, .fab, .pick-field, .tp-item { transition: none; }
 }
