@@ -356,8 +356,14 @@ dialog.ask { width: min(400px, calc(100vw - 32px)); border-radius: 18px; border:
 .person.on .nm { color: var(--text-primary); }
 .people.picking .person:not(.on) { opacity: 0.4; filter: grayscale(0.6); }
 /* Activities of people not picked: still there, but in the background. */
-.ev.faded, .chip.faded, .ag-row.faded { opacity: 0.3; filter: grayscale(0.8); }
-.ev.faded:hover, .chip.faded:hover, .ag-row.faded:hover { opacity: 0.6; }
+.ev.faded, .chip.faded, .ag-row.faded {
+  background: color-mix(in srgb, var(--c) 5%, var(--surface-1)); border-left-color: color-mix(in srgb, var(--c) 25%, var(--surface-2));
+  color: var(--text-muted);
+}
+.faded .ev-s, .faded b, .faded .muted { color: var(--text-muted); }
+.ev.faded:hover, .chip.faded:hover, .ag-row.faded:hover { background: color-mix(in srgb, var(--c) 12%, var(--surface-1)); }
+/* The faces stay in colour, so who is on it shows even when faded. */
+.faded .faces { opacity: 0.85; }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; vertical-align: middle; }
 
 main { padding-top: 12px; }
@@ -400,13 +406,29 @@ main { padding-top: 12px; }
 .ev-t { font-weight: 600; max-width: 100%; hyphens: auto; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .ev.short .ev-t { -webkit-line-clamp: 1; white-space: nowrap; text-overflow: ellipsis; display: block; max-width: 100%; }
 .ev-s { font-size: 11px; color: var(--text-secondary); font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
-.ev-s .dot { width: 7px; height: 7px; }
+.ev-row { display: flex; align-items: center; gap: 4px; max-width: 100%; min-width: 0; }
+.ev-row .ev-t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; min-width: 0; }
+
+/* Who is on an activity: overlapping circles with a photo or the initial. */
+.faces { display: inline-flex; flex: none; margin-top: 3px; max-width: 100%; }
+.faces i {
+  width: 20px; height: 20px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; flex: none;
+  background: var(--c); color: #fff; font-style: normal; font-size: 11px; font-weight: 700; line-height: 1;
+  border: 1.5px solid var(--surface-2);
+}
+.faces i + i { margin-left: -5px; }
+.faces img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.faces.sm { margin: 0 4px 0 0; vertical-align: -3px; }
+.faces.sm i { width: 15px; height: 15px; font-size: 9px; border-width: 1px; }
+.faces.sm i + i { margin-left: -4px; }
 @media (max-width: 600px) {
   .wk-head, .wk-allday, .wk-grid { grid-template-columns: 30px repeat(7, minmax(0, 1fr)); }
   .gutter { font-size: 10px; padding-right: 3px; }
   .hr { right: 3px; }
   .ev { font-size: 11px; padding: 1px 2px 1px 3px; border-left-width: 2px; border-radius: 4px; }
   .ev-s { font-size: 10px; }
+  .faces i { width: 16px; height: 16px; font-size: 9px; }
+  .faces i + i { margin-left: -6px; }
   .wk-day .dn { width: 28px; height: 28px; font-size: 16px; }
   .wk-head { top: 53px; }
 }

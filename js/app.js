@@ -1,12 +1,12 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=5';
-import * as api from './api.js?v=5';
-import { ApiError } from './api.js?v=5';
-import { STORAGE_PREFIX } from './config.js?v=5';
+import * as supa from './supa.js?v=6';
+import * as api from './api.js?v=6';
+import { ApiError } from './api.js?v=6';
+import { STORAGE_PREFIX } from './config.js?v=6';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=5';
+} from './dates.js?v=6';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -167,10 +167,13 @@ const membersText = (ev) => ev.members.map((id) => memberById(id)?.name).filter(
 const avatar = (m) => (m.photo
   ? `<img src="${esc(m.photo)}" alt="">`
   : `<span class="initial">${esc([...m.name.trim()][0] || '?')}</span>`);
-const dots = (ev) => ev.members.map((id) => {
-  const m = memberById(id);
-  return m ? `<i class="dot" style="background:${m.color}" title="${esc(m.name)}"></i>` : '';
-}).join('');
+/** Who is on an activity: small overlapping circles with each person's photo, or their initial on their colour. */
+function faces(ev, small = false) {
+  const ms = ev.members.map(memberById).filter(Boolean);
+  if (!ms.length) return '';
+  return `<span class="faces${small ? ' sm' : ''}">${ms.map((m) => `<i style="--c:${m.color}" title="${esc(m.name)}">${m.photo
+    ? `<img src="${esc(m.photo)}" alt="">` : esc([...m.name.trim()][0] || '?')}</i>`).join('')}</span>`;
+}
 
 /* -------------------------------------------------------------- render */
 
@@ -238,7 +241,8 @@ function renderWeek() {
       const short = h < 36;
       return `<button type="button" class="ev${short ? ' short' : ''}${fade(o.event)}" data-id="${o.event.id}" data-date="${d}"
         style="top:${top}px;height:${h - 2}px;left:calc(${o.lane * w}% + 1px);width:calc(${w}% - 2px);--c:${colorOf(o.event)}">
-        <span class="ev-t">${esc(o.event.title)}</span>${short ? '' : `<span class="ev-s">${o.start}${dots(o.event) ? ` ${dots(o.event)}` : ''}</span>`}</button>`;
+        ${short ? `<span class="ev-row">${faces(o.event, true)}<span class="ev-t">${esc(o.event.title)}</span></span>`
+    : `<span class="ev-t">${esc(o.event.title)}</span><span class="ev-s">${o.start}</span>${faces(o.event)}`}</button>`;
     }).join('');
     let now = '';
     if (d === t) {
@@ -264,7 +268,7 @@ function renderWeek() {
 
 function chip(o, day) {
   const cont = o.date < day ? ' cont' : '';
-  return `<button type="button" class="chip${cont}${fade(o.event)}" data-id="${o.event.id}" data-date="${o.date}" style="--c:${colorOf(o.event)}">${o.allDay ? '' : `<b>${o.start}</b> `}${esc(o.event.title)}</button>`;
+  return `<button type="button" class="chip${cont}${fade(o.event)}" data-id="${o.event.id}" data-date="${o.date}" style="--c:${colorOf(o.event)}">${faces(o.event, true)}${o.allDay ? '' : `<b>${o.start}</b> `}${esc(o.event.title)}</button>`;
 }
 
 function renderMonth() {
@@ -300,7 +304,7 @@ function openDay(d) {
   $('#day-list').innerHTML = list.length ? list.map((o) => `
     <button type="button" class="ag-row${fade(o.event)}" data-id="${o.event.id}" data-date="${o.date}" style="--c:${colorOf(o.event)}">
       <span class="ag-time">${o.allDay ? 'Όλη<br>μέρα' : `${o.start}<br><span class="muted">${o.end}</span>`}</span>
-      <span class="ag-main"><b>${esc(o.event.title)}</b>
+      <span class="ag-main"><b>${faces(o.event, true)}${esc(o.event.title)}</b>
         <span class="small muted">${esc([membersText(o.event), o.event.location].filter(Boolean).join(' · '))}${o.series ? ' · ↻' : ''}</span></span>
     </button>`).join('') : '<p class="empty small">Τίποτα αυτή τη μέρα.</p>';
   const dlg = $('#day-dlg');
