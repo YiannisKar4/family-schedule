@@ -253,6 +253,11 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.4); }
 }
 /* The dimmed background reaches below the screen too, for the same reason. */
 dialog::backdrop { bottom: -100vh; }
+/* Android paints the space the keyboard is sliding into with the page's base colour (light: almost
+   white). While a window is open that colour is the window's (phone) or the dimmed page, so nothing flashes. */
+html { background: var(--page); }
+html:has(dialog[open]) { background: color-mix(in srgb, var(--page) 60%, #000); }
+@media (max-width: 560px) { html:has(dialog:not(.ask)[open]) { background: var(--surface-1); } }
 .dlg { --dlg-top: 18px; padding: var(--dlg-top) 16px 16px; }
 .dlg-head { display: flex; align-items: center; margin-bottom: 12px; }
 /* The title and the close button stay in sight while the window scrolls. */
