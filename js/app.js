@@ -1,14 +1,15 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=32';
-import * as api from './api.js?v=32';
-import * as live from './live.js?v=32';
-import { ApiError } from './api.js?v=32';
-import { STORAGE_PREFIX } from './config.js?v=32';
-import { attachPlaces } from './places.js?v=32';
+import * as supa from './supa.js?v=33';
+import * as api from './api.js?v=33';
+import * as live from './live.js?v=33';
+import { ApiError } from './api.js?v=33';
+import { STORAGE_PREFIX } from './config.js?v=33';
+import { attachPlaces, attachSuggest } from './places.js?v=33';
+import { attachPicker, closePicker, closeOnOutside } from './pickers.js?v=33';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=32';
+} from './dates.js?v=33';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -474,7 +475,6 @@ function fillChoices(ev) {
   $('#f-members').innerHTML = members.length ? members.map((m) =>
     `<button type="button" class="pick" data-v="${m.id}" aria-pressed="false" style="--c:${m.color}"><i class="dot" style="background:${m.color}"></i>${esc(m.name)}</button>`).join('')
     : '<span class="small muted">Δεν υπάρχουν μέλη.</span>';
-  $('#title-suggestions').innerHTML = state.data.titles.map((t) => `<option value="${esc(t.title)}"></option>`).join('');
 }
 
 /** "Άλλο", or no category: the activity needs its own title. Any other category is its own title. */
@@ -1020,6 +1020,8 @@ function init() {
     const t = today();
     const target = state.view === 'week' && body && body.querySelector(`.wk-col[data-day="${narrow.matches ? t : weekStart(t)}"]`);
     if (target) return body.scrollTo({ left: target.offsetLeft - body.querySelector('.wk-grid > .gutter').offsetWidth, behavior: 'smooth' });
+    // The month slides in from the side it is on, as with the arrows.
+    if (state.view === 'month') state.slide = Math.sign(t.slice(0, 7).localeCompare(state.anchor.slice(0, 7)));
     state.anchor = t; state.weekDay = null; show();
   });
   $('#refresh').addEventListener('click', () => fetchData());
@@ -1098,6 +1100,14 @@ function init() {
   });
   $('#f-location').addEventListener('input', syncMap);
   attachPlaces($('#f-location'), syncMap);
+  // Titles used before, in the same rounded list as the places (instead of the browser's own).
+  attachSuggest($('#f-title'), {
+    find: (q) => {
+      const plain = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      const s = plain(q);
+      return state.data.titles.map((t) => t.title).filter((t) => plain(t).includes(s) && plain(t) !== s).slice(0, 8);
+    },
+  }, () => $('#f-title').dispatchEvent(new Event('change')));
   $('#f-members').addEventListener('click', (e) => {
     const b = e.target.closest('.pick');
     if (b) b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
@@ -1109,10 +1119,19 @@ function init() {
     state.timeTouched = true;
     if (s && (!$('#f-end').value || $('#f-end').value <= s)) $('#f-end').value = plusHour(s);
   });
+  // Rounded calendar and time wheels in place of the browser's own.
+  attachPicker($('#f-date'), { kind: 'date' });
+  attachPicker($('#f-start'), { kind: 'time' });
+  attachPicker($('#f-end'), { kind: 'time', fallback: () => ($('#f-start').value ? plusHour($('#f-start').value) : '') });
+  attachPicker($('#f-end-date'), { kind: 'date', clearable: true, fallback: () => $('#f-date').value });
+  attachPicker($('#f-until'), { kind: 'date', empty: 'Χωρίς τέλος', clearable: true, fallback: () => $('#f-date').value });
+  closeOnOutside($('#event-dlg'));
+  $('#event-dlg').addEventListener('close', () => closePicker(true));
   $('#event-form').addEventListener('submit', saveEvent);
   $('#event-delete').addEventListener('click', deleteEvent);
   $('#event-copy').addEventListener('click', copyEvent);
 
+  smoothDialogs();
   document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
   document.querySelectorAll('dialog').forEach((d) => d.addEventListener('click', (e) => { if (e.target === d) d.close(); }));
   initSettings();
@@ -1157,6 +1176,34 @@ function init() {
     fetchData({ quiet: !!state.data });
     startLive();
   }
+}
+
+/**
+ * Windows open and close smoothly: they grow in (on a phone they rise from the bottom) and fade
+ * away, instead of appearing and vanishing at once. close() waits for the fade before closing.
+ */
+function smoothDialogs() {
+  const reduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.querySelectorAll('dialog').forEach((d) => {
+    const close = d.close.bind(d);
+    const showModal = d.showModal.bind(d);
+    let timer = 0;
+    const finish = (v) => { clearTimeout(timer); timer = 0; d.classList.remove('closing'); close(v); };
+    d.close = (v) => {
+      if (!d.open || timer) return;
+      if (reduce()) return close(v);
+      d.classList.add('closing');
+      timer = setTimeout(() => finish(v), 170);
+    };
+    // Opened again while it fades away: close it at once, then open it fresh.
+    d.showModal = () => { if (timer) finish(); showModal(); };
+    // Esc: close an open calendar or time wheel first, then the window, the same smooth way.
+    d.addEventListener('cancel', (e) => { e.preventDefault(); if (!(d.id === 'event-dlg' && closePicker())) d.close(); });
+  });
+  // The confirmation buttons close their window with their value, also smoothly.
+  $('#ask-dlg form').addEventListener('submit', (e) => { e.preventDefault(); $('#ask-dlg').close(e.submitter?.value ?? ''); });
+  // iPhone shows the pressed look (:active) only when the page listens to touches.
+  document.addEventListener('touchstart', () => {}, { passive: true });
 }
 
 /** Loads again whenever someone (e.g. on another phone) changes something. */

@@ -641,11 +641,13 @@ textarea.field { resize: vertical; min-height: 44px; }
 .map-btn[hidden] { display: none; }
 .map-btn svg { width: 18px; height: 18px; }
 .place-list {
-  list-style: none; margin: 4px 0 0; padding: 4px; border: 1px solid var(--border); border-radius: 10px;
-  background: var(--surface-2); box-shadow: var(--shadow); max-height: 240px; overflow-y: auto;
+  list-style: none; margin: 6px 0 0; padding: 6px; border: 1px solid var(--border); border-radius: 16px;
+  background: var(--surface-2); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.08);
+  max-height: 240px; overflow-y: auto; overscroll-behavior: contain; transform-origin: top center;
 }
 .place-list[hidden] { display: none; }
-.place-list li { padding: 10px; border-radius: 8px; cursor: pointer; overflow-wrap: anywhere; line-height: 1.3; }
+.place-list li { padding: 10px 12px; border-radius: 10px; cursor: pointer; overflow-wrap: anywhere; line-height: 1.3; -webkit-tap-highlight-color: transparent; }
+.place-list li:active { transform: scale(0.98); }
 .place-list li:hover, .place-list li[aria-selected="true"] { background: var(--accent-soft); }
 .palette { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 10px; padding: 6px 2px 4px; }
 .palette[hidden] { display: none; }
@@ -722,3 +724,95 @@ textarea.field { resize: vertical; min-height: 44px; }
   .mo-cell { --row-h: 20px; }
 }
 
+/* ---------- smooth motion ---------- */
+/* Windows grow in and fade away; on a phone they rise from the bottom and sink back. */
+dialog[open] { animation: dlg-in 0.26s cubic-bezier(.2, .8, .2, 1); }
+dialog[open]::backdrop { animation: fade-in 0.26s ease; }
+dialog.closing { animation: dlg-out 0.17s ease-in forwards; }
+dialog.closing::backdrop { animation: fade-out 0.17s ease-in forwards; }
+@media (max-width: 560px) {
+  dialog:not(.ask)[open] { animation: sheet-in 0.32s cubic-bezier(.2, .8, .2, 1); }
+  dialog:not(.ask).closing { animation: sheet-out 0.2s ease-in forwards; }
+}
+@keyframes dlg-in { from { opacity: 0; transform: translateY(10px) scale(0.97); } }
+@keyframes dlg-out { to { opacity: 0; transform: translateY(6px) scale(0.98); } }
+@keyframes sheet-in { from { transform: translateY(100%); } }
+@keyframes sheet-out { to { transform: translateY(100%); } }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes fade-out { to { opacity: 0; } }
+@keyframes reveal { from { opacity: 0; transform: translateY(-4px); } }
+
+/* Buttons change colour softly and give a little when pressed. */
+.btn, .icon-btn, .seg button, .pick, .day-picks button, .tab, .fab, .pick-field, .toast-x, .swatch, .palette button, .place-list li, .mo-cell, .wk-day .dn, .dp-day span, .dp-clear {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease, transform 0.15s ease;
+}
+.btn:not(:disabled):active, .icon-btn:not(:disabled):active, .seg button:active, .pick:active, .day-picks button:active,
+.tab:active, .pick-field:active, .swatch:active, .palette button:active, .dp-day:active span { transform: scale(0.96); }
+.fab:active { transform: scale(0.92); }
+.btn, .icon-btn, .seg button, .pick, .day-picks button, .tab, .fab, .pick-field, .dp-day { -webkit-tap-highlight-color: transparent; }
+/* What shows up in the activity window (times, end date, repeat days, title) fades in. */
+#time-pair, #end-date-box, #repeat-box, #title-box { animation: reveal 0.22s ease; }
+
+/* ---------- date and time pickers ---------- */
+.pick-field {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left; cursor: pointer;
+  border-radius: 12px; min-height: 44px; font-variant-numeric: tabular-nums;
+}
+.pick-field .pf-text { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pick-field svg { flex: none; width: 18px; height: 18px; color: var(--text-muted); transition: color 0.2s ease; }
+.pick-field:hover { border-color: var(--axis); }
+.pick-field[aria-expanded="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.pick-field[aria-expanded="true"] svg { color: var(--accent); }
+.pick-field:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+@media (pointer: coarse) { .pick-field { font-size: 16px; } }
+
+.picker { overflow: hidden; scroll-margin-bottom: 96px; }
+.picker-in {
+  margin-top: 8px; padding: 10px; border: 1px solid var(--border); border-radius: 18px;
+  background: var(--surface-2); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+.dp-head { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
+.dp-title { flex: 1; text-align: center; font-size: 15px; }
+.dp-wd, .dp-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.dp-wd span { text-align: center; font-size: 12px; font-weight: 600; color: var(--text-muted); padding: 4px 0; }
+.dp-wd span.we { color: var(--series-7); }
+.dp-day { border: 0; background: none; padding: 2px 0; cursor: pointer; display: grid; place-items: center; color: var(--text-primary); }
+.dp-day span {
+  width: 38px; height: 38px; max-width: 100%; border-radius: 50%; display: grid; place-items: center;
+  font-size: 15px; font-variant-numeric: tabular-nums;
+}
+.dp-day.we span { color: var(--series-7); }
+.dp-day.out span { color: var(--text-muted); opacity: 0.55; }
+@media (hover: hover) { .dp-day:hover span { background: var(--surface-sunk); } }
+.dp-day.today span { color: var(--accent); font-weight: 700; box-shadow: inset 0 0 0 1.5px var(--accent); }
+.dp-day.sel span { background: var(--accent); color: var(--accent-ink); font-weight: 700; opacity: 1; box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 40%, transparent); animation: pop 0.25s cubic-bezier(.2, .8, .2, 1); }
+.dp-day:focus-visible { outline: none; }
+.dp-day:focus-visible span { box-shadow: 0 0 0 2px var(--accent); }
+@keyframes pop { from { transform: scale(0.7); } }
+.dp-foot { display: flex; justify-content: flex-end; margin-top: 4px; }
+.dp-clear { border: 0; background: none; color: var(--accent); font-weight: 600; font-size: 14px; padding: 6px 10px; border-radius: 999px; cursor: pointer; }
+.dp-clear:hover { background: var(--accent-soft); }
+
+/* Time: two wheels, hours and minutes; the one in the middle band is the chosen one. */
+.tp { position: relative; display: flex; justify-content: center; align-items: center; gap: 2px; height: 200px; }
+.tp-band { position: absolute; left: 8px; right: 8px; top: 80px; height: 40px; border-radius: 12px; background: var(--accent-soft); pointer-events: none; }
+.tp-col {
+  position: relative; width: 76px; height: 200px; padding: 80px 0; overflow-y: auto; overscroll-behavior: contain;
+  scroll-snap-type: y mandatory; scrollbar-width: none; outline: none; border-radius: 12px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 32%, #000 68%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 32%, #000 68%, transparent);
+}
+.tp-col::-webkit-scrollbar { display: none; }
+.tp-item {
+  height: 40px; display: grid; place-items: center; scroll-snap-align: center; cursor: pointer; user-select: none;
+  font-size: 20px; font-variant-numeric: tabular-nums; color: var(--text-muted); transition: color 0.15s ease, transform 0.15s ease;
+}
+.tp-item.sel { color: var(--accent); font-weight: 650; transform: scale(1.1); }
+.tp-col:focus-visible .tp-item.sel { text-decoration: underline; text-underline-offset: 4px; }
+.tp-colon { position: relative; font-size: 20px; font-weight: 650; color: var(--accent); padding-bottom: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  dialog[open], dialog[open]::backdrop, dialog.closing, dialog.closing::backdrop,
+  #time-pair, #end-date-box, #repeat-box, #title-box, .dp-day.sel span { animation: none !important; }
+  .btn, .icon-btn, .seg button, .pick, .day-picks button, .tab, .fab, .pick-field, .tp-item { transition: none; }
+}

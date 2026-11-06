@@ -39,16 +39,24 @@ async function search(q, signal) {
 }
 
 /**
- * Adds suggestions under `input`. `onPick` runs after a suggestion fills the field.
+ * Adds place suggestions under `input`. `onPick` runs after a suggestion fills the field.
  * Returns `close` so the caller can hide the list (e.g. when the window opens).
  */
 export function attachPlaces(input, onPick = () => {}) {
+  return attachSuggest(input, { find: search, min: MIN_CHARS, wait: WAIT_MS }, onPick);
+}
+
+/**
+ * A rounded list of suggestions under `input`, used for places and for titles.
+ * find(q, signal) gives the suggestions for what is typed (a list, or a promise of one).
+ */
+export function attachSuggest(input, { find, min = 1, wait = 0 }, onPick = () => {}) {
   const box = document.createElement('ul');
   box.className = 'place-list';
   box.id = `${input.id}-list`;
   box.setAttribute('role', 'listbox');
   box.hidden = true;
-  input.closest('.place-row').after(box);
+  (input.closest('.place-row') || input).after(box);
   input.setAttribute('role', 'combobox');
   input.setAttribute('aria-autocomplete', 'list');
   input.setAttribute('aria-controls', box.id);
@@ -88,8 +96,12 @@ export function attachPlaces(input, onPick = () => {}) {
       li.textContent = text;
       return li;
     }));
+    const appear = box.hidden && list.length;
     box.hidden = !list.length;
     input.setAttribute('aria-expanded', String(!!list.length));
+    if (appear && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      box.animate([{ opacity: 0, transform: 'translateY(-6px) scale(0.98)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+    }
     if (list.length) box.scrollIntoView({ block: 'nearest' });
   };
 
@@ -104,16 +116,16 @@ export function attachPlaces(input, onPick = () => {}) {
     clearTimeout(timer);
     ctrl?.abort();
     const q = input.value.trim();
-    if (q.length < MIN_CHARS) { show([]); return; }
+    if (q.length < min) { show([]); return; }
     timer = setTimeout(async () => {
       ctrl = new AbortController();
       try {
-        const list = await search(q, ctrl.signal);
+        const list = await find(q, ctrl.signal);
         if (input.value.trim() === q && document.activeElement === input) show(list);
       } catch (e) {
         if (e.name !== 'AbortError') show([]); // offline or service down: typing still works
       }
-    }, WAIT_MS);
+    }, wait);
   });
 
   input.addEventListener('keydown', (e) => {

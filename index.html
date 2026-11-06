@@ -26,8 +26,8 @@
       new MutationObserver(paint).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
     })();
   </script>
-  <link rel="stylesheet" href="css/style.css?v=32">
-  <script type="module" src="js/app.js?v=32"></script>
+  <link rel="stylesheet" href="css/style.css?v=33">
+  <script type="module" src="js/app.js?v=33"></script>
   <script>if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>
 </head>
 <body>
@@ -70,29 +70,28 @@
       <div class="chip-row" id="f-category"></div>
       <div id="title-box">
         <label class="lbl" for="f-title">Τι</label>
-        <input class="field title-input" id="f-title" autocomplete="off" list="title-suggestions" placeholder="π.χ. Γενέθλια Μαρίας">
-        <datalist id="title-suggestions"></datalist>
+        <input class="field title-input" id="f-title" autocomplete="off" placeholder="π.χ. Γενέθλια Μαρίας">
       </div>
       <label class="lbl">Ποιος</label>
       <div class="chip-row" id="f-members"></div>
       <div class="form-grid">
         <div>
           <label class="lbl" for="f-date">Ημερομηνία</label>
-          <input class="field" id="f-date" type="date" required>
+          <input id="f-date" type="hidden">
         </div>
         <div class="time-pair" id="time-pair">
           <div>
             <label class="lbl" for="f-start">Από</label>
-            <input class="field" id="f-start" type="time" step="300">
+            <input id="f-start" type="hidden">
           </div>
           <div>
             <label class="lbl" for="f-end">Έως</label>
-            <input class="field" id="f-end" type="time" step="300">
+            <input id="f-end" type="hidden">
           </div>
         </div>
         <div id="end-date-box" hidden>
           <label class="lbl" for="f-end-date">Μέχρι και</label>
-          <input class="field" id="f-end-date" type="date">
+          <input id="f-end-date" type="hidden">
         </div>
       </div>
       <label class="check"><input type="checkbox" id="f-allday"> Όλη μέρα</label>
@@ -105,7 +104,7 @@
       <div id="repeat-box" hidden>
         <div class="day-picks" id="f-days" role="group" aria-label="Μέρες"></div>
         <label class="lbl" for="f-until">Μέχρι (κενό: χωρίς τέλος)</label>
-        <input class="field" id="f-until" type="date">
+        <input id="f-until" type="hidden">
       </div>
       <label class="lbl" for="f-location">Πού</label>
       <div class="place-row">
