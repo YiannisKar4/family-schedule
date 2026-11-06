@@ -385,9 +385,14 @@ main { padding-top: 12px; }
 .note + .card { margin-top: 12px; }
 
 /* ---------- week ---------- */
-.week { padding: 0; overflow: clip; }
-.wk-head, .wk-allday, .wk-grid { display: grid; grid-template-columns: 40px repeat(7, minmax(0, 1fr)); }
-.wk-head { position: sticky; top: 57px; z-index: 5; background: var(--surface-1); border-bottom: 1px solid var(--axis); }
+.week { padding: 0; overflow: clip; container-type: inline-size; --gut: 40px; --day: minmax(0, 1fr); }
+.wk-head, .wk-allday, .wk-grid { display: grid; grid-template-columns: var(--gut) repeat(7, var(--day)); }
+/* The day names stay under the top bar; they follow the days when the week scrolls sideways. */
+.wk-top { position: sticky; top: var(--topbar-h, 57px); z-index: 5; overflow: hidden; background: var(--surface-1); border-bottom: 1px solid var(--axis); }
+.wk-body { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; }
+.wk-body::-webkit-scrollbar { display: none; }
+.wk-head > .gutter, .wk-allday > .gutter, .wk-grid > .gutter { position: sticky; left: 0; z-index: 4; }
+.wk-head > .gutter, .wk-allday > .gutter { background: var(--surface-1); }
 .wk-day {
   border: 0; background: none; cursor: pointer; padding: 8px 0 6px; display: flex; flex-direction: column; align-items: center; gap: 1px;
   color: var(--text-secondary); border-radius: 0;
@@ -454,7 +459,10 @@ main { padding-top: 12px; }
 .faces.sm i { width: 15px; height: 15px; font-size: 9px; border-width: 1px; }
 .faces.sm i + i { margin-left: -4px; }
 @media (max-width: 600px) {
-  .wk-head, .wk-allday, .wk-grid { grid-template-columns: 30px repeat(7, minmax(0, 1fr)); }
+  /* About three and a half days on the screen; swipe for the rest, stopping at a day. */
+  .week { --gut: 30px; --day: calc((100cqw - 30px) / 3.5); }
+  .wk-body { scroll-snap-type: x mandatory; scroll-padding-left: 30px; }
+  .wk-col { scroll-snap-align: start; }
   .gutter { font-size: 10px; padding-right: 3px; }
   .hr { right: 3px; }
   .ev { font-size: 11px; padding: 1px 2px 0 3px; border-left-width: 2px; border-radius: 4px; }
@@ -462,7 +470,6 @@ main { padding-top: 12px; }
   .faces i { width: 16px; height: 16px; font-size: 9px; }
   .faces i + i { margin-left: -6px; }
   .wk-day .dn { width: 28px; height: 28px; font-size: 16px; }
-  .wk-head { top: 53px; }
 }
 
 /* chips: all-day row and month cells */
@@ -569,4 +576,22 @@ textarea.field { resize: vertical; min-height: 44px; }
 /* iPhone zooms the page into any field under 16px when tapped, which cuts the window off. */
 @media (pointer: coarse) {
   .field:not(.title-input):not(.amount-input) { font-size: 16px; }
+}
+
+/* Phone on its side: little height, so the bars shrink and the calendar gets the room. */
+@media (max-height: 500px) and (orientation: landscape) {
+  body { padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
+  .topbar-inner { padding-top: 4px; padding-bottom: 4px; }
+  .brand { display: none; }
+  .tabs { padding: 2px 8px calc(2px + env(safe-area-inset-bottom)); }
+  .tab { flex-direction: row; gap: 6px; padding: 5px 8px; font-size: 13px; }
+  .tab svg { width: 18px; height: 18px; }
+  .fab { height: 44px; width: 44px; padding: 0; justify-content: center; font-size: 0; gap: 0; bottom: calc(48px + env(safe-area-inset-bottom)); }
+  .people { padding-top: 6px; }
+  .person { flex-direction: row; gap: 6px; }
+  .person .ph { width: 30px; }
+  .person .initial { font-size: 14px; }
+  .person .nm { font-size: 13px; }
+  .wk-day { flex-direction: row; justify-content: center; gap: 6px; padding: 3px 0; }
+  .wk-day .dn { width: 26px; height: 26px; font-size: 15px; }
 }

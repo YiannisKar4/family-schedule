@@ -1,14 +1,14 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=16';
-import * as api from './api.js?v=16';
-import * as live from './live.js?v=16';
-import { ApiError } from './api.js?v=16';
-import { STORAGE_PREFIX } from './config.js?v=16';
-import { attachPlaces } from './places.js?v=16';
+import * as supa from './supa.js?v=17';
+import * as api from './api.js?v=17';
+import * as live from './live.js?v=17';
+import { ApiError } from './api.js?v=17';
+import { STORAGE_PREFIX } from './config.js?v=17';
+import { attachPlaces } from './places.js?v=17';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=16';
+} from './dates.js?v=17';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -289,12 +289,39 @@ function renderWeek() {
   const empty = !occ.length ? `<p class="empty small">Τίποτα αυτή την εβδομάδα. Πάτα σε μια ώρα ή στο «Νέο» για να προσθέσεις.</p>` : '';
   $('#main').innerHTML = `
     <div class="week card">
-      <div class="wk-head"><div class="gutter"></div>${head}</div>
-      ${allDayRow}
-      <div class="wk-grid" style="height:${hours * HOUR_PX}px;--hour:${HOUR_PX}px" data-start="${startH}">
-        <div class="gutter">${gutter}</div>${cols}
+      <div class="wk-top"><div class="wk-head"><div class="gutter"></div>${head}</div></div>
+      <div class="wk-body">
+        ${allDayRow}
+        <div class="wk-grid" style="height:${hours * HOUR_PX}px;--hour:${HOUR_PX}px" data-start="${startH}">
+          <div class="gutter">${gutter}</div>${cols}
+        </div>
       </div>
     </div>${empty}`;
+  weekScroll(from);
+}
+
+/**
+ * On a phone the week is wider than the screen: about three and a half days show and a swipe
+ * shows the rest. The day names follow the sideways scroll, and the place is kept when the
+ * calendar is drawn again. A new week opens on today, or on Monday (Sunday when coming back).
+ */
+function weekScroll(from) {
+  const body = $('.wk-body');
+  const top = $('.wk-top');
+  const max = body.scrollWidth - body.clientWidth;
+  if (max > 0) {
+    let x = 0;
+    const today = body.querySelector('.wk-col.today');
+    if (state.weekX && state.weekX.week === from) x = state.weekX.x === 'end' ? max : state.weekX.x;
+    else if (today) x = today.offsetLeft - body.querySelector('.wk-grid > .gutter').offsetWidth;
+    body.scrollLeft = x;
+    top.scrollLeft = body.scrollLeft;
+  }
+  state.weekX = { week: from, x: body.scrollLeft };
+  body.addEventListener('scroll', () => {
+    top.scrollLeft = body.scrollLeft;
+    state.weekX = { week: from, x: body.scrollLeft };
+  }, { passive: true });
 }
 
 function chip(o, day) {
@@ -893,14 +920,31 @@ function init() {
   });
 
   // Swipe left or right to move a week or a month.
+  // When the week scrolls sideways (phone), the swipe first scrolls the days, and moves a week
+  // only from the first or last day.
   let touch = null;
-  $('#main').addEventListener('touchstart', (e) => { touch = e.touches.length === 1 ? [e.touches[0].clientX, e.touches[0].clientY] : null; }, { passive: true });
+  $('#main').addEventListener('touchstart', (e) => {
+    const body = e.target.closest('.wk-body');
+    const max = body ? body.scrollWidth - body.clientWidth : 0;
+    touch = e.touches.length === 1 ? {
+      x: e.touches[0].clientX, y: e.touches[0].clientY,
+      atStart: !max || body.scrollLeft <= 2, atEnd: !max || body.scrollLeft >= max - 2,
+    } : null;
+  }, { passive: true });
   $('#main').addEventListener('touchend', (e) => {
     if (!touch || !state.data) return;
-    const dx = e.changedTouches[0].clientX - touch[0];
-    const dy = e.changedTouches[0].clientY - touch[1];
+    const dx = e.changedTouches[0].clientX - touch.x;
+    const dy = e.changedTouches[0].clientY - touch.y;
+    const { atStart, atEnd } = touch;
     touch = null;
-    if (Math.abs(dx) > 70 && Math.abs(dy) < 45) step(dx < 0 ? 1 : -1);
+    if (Math.abs(dx) <= 70 || Math.abs(dy) >= 45) return;
+    if (dx < 0 && atEnd) {
+      if (state.view === 'week') state.weekX = { week: weekStart(addDays(state.anchor, 7)), x: 0 };
+      step(1);
+    } else if (dx > 0 && atStart) {
+      if (state.view === 'week') state.weekX = { week: weekStart(addDays(state.anchor, -7)), x: 'end' };
+      step(-1);
+    }
   }, { passive: true });
 
   $('#day-list').addEventListener('click', (e) => {
@@ -957,6 +1001,9 @@ function init() {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && supa.signedIn() && Date.now() - state.lastFetch > 60000) fetchData({ quiet: true });
   });
+  // The day names stick just under the top bar, whatever its height.
+  const bar = $('.topbar');
+  new ResizeObserver(() => document.documentElement.style.setProperty('--topbar-h', `${bar.offsetHeight}px`)).observe(bar);
   // Phone and wider screens use different hour heights.
   narrow.addEventListener('change', () => { if (state.view === 'week' && state.data) render(); });
   // Keep the "now" line moving.
