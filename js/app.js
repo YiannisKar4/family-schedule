@@ -1,13 +1,14 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=12';
-import * as api from './api.js?v=12';
-import * as live from './live.js?v=12';
-import { ApiError } from './api.js?v=12';
-import { STORAGE_PREFIX } from './config.js?v=12';
+import * as supa from './supa.js?v=13';
+import * as api from './api.js?v=13';
+import * as live from './live.js?v=13';
+import { ApiError } from './api.js?v=13';
+import { STORAGE_PREFIX } from './config.js?v=13';
+import { attachPlaces } from './places.js?v=13';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=12';
+} from './dates.js?v=13';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -893,6 +894,7 @@ function init() {
     if (form.category && !needsTitle(form.category)) applyTemplate(categoryById(form.category).name);
   });
   $('#f-location').addEventListener('input', syncMap);
+  attachPlaces($('#f-location'), syncMap);
   $('#f-members').addEventListener('click', (e) => {
     const b = e.target.closest('.pick');
     if (b) b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
