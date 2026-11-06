@@ -14,7 +14,10 @@ Live at **https://yianniskar4.github.io/family-schedule/**
   Tap a circle again to let it go. Activities with nobody set (family things) never fade.
 - Every activity shows who is on it: small circles with each person's photo, or their initial on
   their colour. They stay in colour even when the activity is faded.
-- **+ Νέο**: add in a few taps. Typing a title used before (e.g. "Ποδόσφαιρο") fills in its usual
+- **+ Νέο**: pick a category and that is the title (Ποδόσφαιρο, Γιατρός …). Only **Άλλο**, or no category,
+  asks **Τι**. Older activities with their own title keep it. **Πού** has a **Χάρτης** button that opens the
+  place in Maps.
+- Picking a category or typing a title used before (e.g. "Ποδόσφαιρο") fills in its usual
   category, people, time and place.
 - **Επανάληψη**: every week or every two weeks, on the days you pick, until a date or with no end.
   Changing or deleting one date asks: **Μόνο αυτή**, **Αυτή και επόμενες** or **Όλες**.

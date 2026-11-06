@@ -519,6 +519,11 @@ textarea.field { resize: vertical; min-height: 44px; }
 .manage-row.hidden-cat .field { color: var(--text-muted); text-decoration: line-through; }
 .manage-row .icon-btn:disabled { opacity: 0.3; cursor: default; }
 .swatch { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--surface-2); box-shadow: 0 0 0 1px var(--border); cursor: pointer; }
+.place-row { display: flex; gap: 6px; }
+.place-row .field { flex: 1; min-width: 0; }
+.map-btn { flex: none; display: inline-flex; align-items: center; gap: 4px; text-decoration: none; }
+.map-btn[hidden] { display: none; }
+.map-btn svg { width: 16px; height: 16px; }
 .palette { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 10px; padding: 6px 2px 4px; }
 .palette[hidden] { display: none; }
 .palette button {
