@@ -310,7 +310,7 @@ http.createServer(async (req, res) => {
   reply(404, { message: 'not found' });
 }).on('upgrade', upgrade).listen(API_PORT);
 
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png' };
 http.createServer((req, res) => {
   const p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (p.endsWith('/js/config.js') && fs.existsSync(path.join(root, p))) {

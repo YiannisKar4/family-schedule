@@ -60,6 +60,8 @@ Still answer questions with an answer, not with a change.
 See README.md. Before pushing: `npm run test:db`, `npm run test:expand`, and a look at the site in the
 mock (`node dev/supabase-mock.mjs`, sign in as a@example.com, code at
 http://localhost:8091/__mail?email=a@example.com). After changing any `.js` or `.css`, raise every `?v=`.
+The site installs as an app (PWA): `manifest.json`, `icons/`, `sw.js`. The service worker caches only
+this site's files: the page network-first, `?v=` files cache-first (so the `?v=` raise is what ships them).
 
 Known limit: on a narrow phone, overlapping events in the week view truncate their titles;
 the day list (tap the day name) shows them in full.
