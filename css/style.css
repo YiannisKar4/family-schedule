@@ -303,6 +303,8 @@ code { background: var(--surface-sunk); padding: 1px 5px; border-radius: 5px; fo
 /* ---------- small-screen fixes ---------- */
 .check { min-height: 32px; }
 dialog { overflow-y: auto; overscroll-behavior: contain; }
+/* A field scrolled into view stays clear of the Save bar at the bottom of the window. */
+.dlg .field { scroll-margin-bottom: 84px; scroll-margin-top: 64px; }
 .dlg .row-actions {
   position: sticky; bottom: 0; z-index: 1;
   background: var(--surface-1);

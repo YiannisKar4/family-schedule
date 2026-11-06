@@ -1,15 +1,15 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=37';
-import * as api from './api.js?v=37';
-import * as live from './live.js?v=37';
-import { ApiError } from './api.js?v=37';
-import { STORAGE_PREFIX } from './config.js?v=37';
-import { attachPlaces, attachSuggest } from './places.js?v=37';
-import { attachPicker, closePicker, closeOnOutside } from './pickers.js?v=37';
+import * as supa from './supa.js?v=38';
+import * as api from './api.js?v=38';
+import * as live from './live.js?v=38';
+import { ApiError } from './api.js?v=38';
+import { STORAGE_PREFIX } from './config.js?v=38';
+import { attachPlaces, attachSuggest } from './places.js?v=38';
+import { attachPicker, closePicker, closeOnOutside } from './pickers.js?v=38';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=37';
+} from './dates.js?v=38';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -1249,8 +1249,19 @@ function trackVisibleArea() {
     root.setProperty('--vv-h', `${Math.round(vv.height)}px`);
     root.setProperty('--vv-below', `${Math.round(below)}px`);
   };
-  vv.addEventListener('resize', update);
+  // When the keyboard opens the window gets shorter; keep the field being typed in on screen
+  // (on Android it ended up below, hidden behind the keyboard).
+  let t = 0;
+  const keepFocusVisible = () => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      const f = document.activeElement;
+      if (f && f.matches('input, textarea') && f.closest('dialog[open]')) f.scrollIntoView({ block: 'nearest' });
+    }, 60);
+  };
+  vv.addEventListener('resize', () => { update(); keepFocusVisible(); });
   vv.addEventListener('scroll', update);
+  addEventListener('resize', keepFocusVisible);
   update();
 }
 
