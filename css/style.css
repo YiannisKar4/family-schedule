@@ -376,6 +376,23 @@ dialog.ask { width: min(400px, calc(100vw - 32px)); border-radius: 18px; border:
   .people.in-bar .nm { display: block; font-size: 13px; }
 }
 @media (max-width: 899px) { .topbar-inner:has(.people.in-bar:not([hidden])) .brand { display: none; } }
+/* Upright phone: the circles sit in the bottom bar, and «Εβδομάδα» / «Μήνας» become icons. */
+.tabs:has(.people.in-tabs:not([hidden])) { justify-content: flex-start; gap: 2px; padding-left: 6px; padding-right: 6px; }
+.tabs:has(.people.in-tabs:not([hidden])) .tab { flex: none; width: 44px; font-size: 0; gap: 0; padding: 10px 0; align-self: center; }
+.tabs:has(.people.in-tabs:not([hidden])) .tab svg { width: 24px; height: 24px; }
+.tabs:has(.people.in-tabs:not([hidden])) .tab[aria-selected="true"] { background: var(--accent-soft); }
+.people.in-tabs {
+  flex: 1 1 auto; min-width: 0; margin: 0 0 0 4px; padding: 0 2px; gap: 2px; justify-content: flex-start;
+  border-left: 1px solid var(--border);
+}
+.people.in-tabs > :first-child { margin-left: auto; }
+.people.in-tabs > :last-child { margin-right: auto; }
+.people.in-tabs .person { padding: 4px 4px 2px; }
+.people.in-tabs .nm { font-size: 11px; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 359px) {
+  .tabs:has(.people.in-tabs:not([hidden])) .tab { width: 40px; }
+  .people.in-tabs .nm { max-width: 50px; }
+}
 /* Activities of people not picked: still there, but in the background. */
 .ev.faded, .chip.faded, .ag-row.faded {
   background: color-mix(in srgb, var(--c) 5%, var(--surface-1)); border-left-color: color-mix(in srgb, var(--c) 25%, var(--surface-2));
@@ -609,7 +626,11 @@ textarea.field { resize: vertical; min-height: 44px; }
   .topbar-inner { padding-top: 4px; padding-bottom: 4px; }
   .brand { display: none; }
   .tabs { padding: 2px 8px calc(2px + env(safe-area-inset-bottom)); }
-  .tab { flex-direction: row; gap: 6px; padding: 5px 8px; font-size: 13px; }
+  /* «Εβδομάδα» / «Μήνας» at the bottom, as upright, so the calendar starts right under the top bar. */
+  .tabs-wrap { padding: 0; }
+  .tabs { position: fixed; background: var(--surface-2); border-top: 1px solid var(--border); justify-content: center; }
+  .tab { flex: 1; max-width: 140px; flex-direction: row; gap: 6px; padding: 5px 8px; font-size: 13px; }
+  .tab[aria-selected="true"] { background: none; }
   .tab svg { width: 18px; height: 18px; }
   .fab { bottom: calc(48px + env(safe-area-inset-bottom)); }
   .people.in-bar .ph { width: 28px; }

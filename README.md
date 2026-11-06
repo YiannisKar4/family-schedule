@@ -9,7 +9,7 @@ Live at **https://yianniskar4.github.io/family-schedule/**
 - **Εβδομάδα**: Monday to Sunday by the hour, with an all-day row. Tap an empty hour to add something at that time.
   Tap a day's name to see that day as a list.
 - **Μήνας**: the month grid. Tap a day to see its list and add to it.
-- **Ποιος** (big circles above the calendar, one per person, with their photo or initial):
+- **Ποιος** (one circle per person, with their photo or initial; always in sight: in the top bar on a sideways phone, a tablet or a computer, in the bottom bar on an upright phone):
   tap one or more to make their activities stand out; the others fade but stay on screen.
   Tap a circle again to let it go. Activities with nobody set (family things) never fade.
 - Every activity shows who is on it: small circles with each person's photo, or their initial on

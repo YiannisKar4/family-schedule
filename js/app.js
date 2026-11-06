@@ -1,14 +1,14 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=24';
-import * as api from './api.js?v=24';
-import * as live from './live.js?v=24';
-import { ApiError } from './api.js?v=24';
-import { STORAGE_PREFIX } from './config.js?v=24';
-import { attachPlaces } from './places.js?v=24';
+import * as supa from './supa.js?v=25';
+import * as api from './api.js?v=25';
+import * as live from './live.js?v=25';
+import { ApiError } from './api.js?v=25';
+import { STORAGE_PREFIX } from './config.js?v=25';
+import { attachPlaces } from './places.js?v=25';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=24';
+} from './dates.js?v=25';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -1068,14 +1068,15 @@ function init() {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && supa.signedIn() && Date.now() - state.lastFetch > 60000) fetchData({ quiet: true });
   });
-  // On a wide or sideways screen the circles sit in the top bar, between the week and «Σήμερα»,
-  // so they stay in sight when the calendar scrolls.
+  // The circles stay in sight when the calendar scrolls: on a wide or sideways screen in the
+  // top bar, between the week and «Σήμερα»; on an upright phone in the bottom bar, next to the tabs.
   const peopleInBar = matchMedia('(orientation: landscape), (min-width: 700px)');
   const placePeople = () => {
     const box = $('#people');
     if (peopleInBar.matches) $('#range-nav').after(box);
-    else $('#tabs-wrap').after(box);
+    else $('.tabs').append(box);
     box.classList.toggle('in-bar', peopleInBar.matches);
+    box.classList.toggle('in-tabs', !peopleInBar.matches);
   };
   placePeople();
   peopleInBar.addEventListener('change', placePeople);
