@@ -414,7 +414,8 @@ main { padding-top: 12px; }
 }
 .wk-col { position: relative; border-left: 1px solid color-mix(in srgb, var(--axis) 45%, var(--grid)); cursor: copy; }
 .wk-col.we { --band-a: color-mix(in srgb, var(--series-7) 13%, var(--surface-1)); --band-b: color-mix(in srgb, var(--series-7) 6%, var(--surface-1)); }
-.wk-col.today, .wk-day.today { --band-a: color-mix(in srgb, var(--accent) 10%, var(--surface-1)); --band-b: var(--band-a); background-color: var(--band-a); }
+.wk-col.today { --band-a: color-mix(in srgb, var(--accent) 15%, var(--surface-1)); --band-b: color-mix(in srgb, var(--accent) 8%, var(--surface-1)); }
+.wk-day.today { background-color: color-mix(in srgb, var(--accent) 10%, var(--surface-1)); }
 .ad-cell.we { background: color-mix(in srgb, var(--series-7) 6%, var(--surface-1)); }
 .wk-day.we:not(.today) .wd { color: var(--series-7); font-weight: 600; }
 .now { position: absolute; left: 0; right: 0; height: 2px; background: var(--critical); z-index: 3; pointer-events: none; }
