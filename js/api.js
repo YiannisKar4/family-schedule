@@ -1,5 +1,5 @@
 // Calls the api_sched_* functions in the database, with readable errors.
-import * as supa from './supa.js?v=1';
+import * as supa from './supa.js?v=2';
 
 export class ApiError extends Error {
   constructor(message, code = '') {
@@ -23,5 +23,6 @@ export const add = (event) => rpc('api_sched_add', { event });
 export const update = (id, event, scope = 'all', onDate = null) => rpc('api_sched_update', { id, event, scope, on_date: onDate });
 export const remove = (id, scope = 'all', onDate = null) => rpc('api_sched_delete', { id, scope, on_date: onDate });
 export const saveMember = (member) => rpc('api_sched_save_member', { member });
+export const memberPhoto = (id, photo) => rpc('api_sched_member_photo', { id, photo });
 export const saveCategory = (category) => rpc('api_sched_save_category', { category });
 export const order = (kind, ids) => rpc('api_sched_order', { kind, ids });

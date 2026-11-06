@@ -9,13 +9,15 @@ Live at **https://yianniskar4.github.io/family-schedule/**
 - **Εβδομάδα**: Monday to Sunday by the hour, with an all-day row. Tap an empty hour to add something at that time.
   Tap a day's name to see that day as a list.
 - **Μήνας**: the month grid. Tap a day to see its list and add to it.
-- **Ποιος** (chips under the tabs): show only the activities of the people you pick.
+- **Ποιος** (big circles above the calendar, one per person, with their photo or initial):
+  tap one to see only that person's activities, tap it again to see everyone's.
   Activities with nobody set (family things) always show.
 - **+ Νέο**: add in a few taps. Typing a title used before (e.g. "Ποδόσφαιρο") fills in its usual
   category, people, time and place.
 - **Επανάληψη**: every week or every two weeks, on the days you pick, until a date or with no end.
   Changing or deleting one date asks: **Μόνο αυτή**, **Αυτή και επόμενες** or **Όλες**.
-- **Ρυθμίσεις** (gear): family members and categories, each with a colour. Hidden ones stay on old
+- **Ρυθμίσεις** (gear): family members and categories, each with a colour. Tap a member's circle to
+  give them a photo (the site shrinks it to a small square before saving); the × removes it. Hidden ones stay on old
   activities but are not offered for new ones.
 - Swipe left or right to move a week or a month. Coming back to the page reloads what others added.
 
@@ -42,7 +44,7 @@ Phone / laptop ──► GitHub Pages (this repo: HTML + JS, no build step)
   a date changed on its own becomes its own event with `parent_id` pointing at the series.
 - The site calls only the `api_sched_*` functions in [`supabase/schema.sql`](supabase/schema.sql):
   `api_sched_read`, `api_sched_add`, `api_sched_update`, `api_sched_delete`,
-  `api_sched_save_member`, `api_sched_save_category`, `api_sched_order`.
+  `api_sched_save_member`, `api_sched_member_photo`, `api_sched_save_category`, `api_sched_order`.
 - Both sites are on `yianniskar4.github.io`, so they share the browser's storage. The schedule uses the
   budget's sign-in key: signed in to one means signed in to the other on that device, and
   **Αποσύνδεση** signs out of both.

@@ -1,12 +1,12 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=1';
-import * as api from './api.js?v=1';
-import { ApiError } from './api.js?v=1';
-import { STORAGE_PREFIX } from './config.js?v=1';
+import * as supa from './supa.js?v=2';
+import * as api from './api.js?v=2';
+import { ApiError } from './api.js?v=2';
+import { STORAGE_PREFIX } from './config.js?v=2';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=1';
+} from './dates.js?v=2';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -23,7 +23,7 @@ const state = {
   view: 'week',
   anchor: today(),
   data: null, // { members, categories, events, titles, from, to }
-  filter: [], // member ids; empty = everyone
+  filter: [], // [member id] to show one person; empty = everyone
   loading: false,
   lastFetch: 0,
   editing: null, // { event, date } while the event window is open
@@ -161,6 +161,10 @@ function occurrences(from, to) {
 
 const timeText = (o) => (o.allDay ? 'Όλη μέρα' : `${o.start}–${o.end}`);
 const membersText = (ev) => ev.members.map((id) => memberById(id)?.name).filter(Boolean).join(', ');
+/** A member's photo, or the first letter of the name on their colour. */
+const avatar = (m) => (m.photo
+  ? `<img src="${esc(m.photo)}" alt="">`
+  : `<span class="initial">${esc([...m.name.trim()][0] || '?')}</span>`);
 const dots = (ev) => ev.members.map((id) => {
   const m = memberById(id);
   return m ? `<i class="dot" style="background:${m.color}" title="${esc(m.name)}"></i>` : '';
@@ -171,6 +175,7 @@ const dots = (ev) => ev.members.map((id) => {
 function render() {
   const ready = supa.signedIn() && state.data;
   $('#tabs-wrap').hidden = !ready;
+  $('#people').hidden = true;
   $('#range-nav').hidden = !ready;
   $('#today').hidden = !ready;
   $('#fab').hidden = !ready;
@@ -181,18 +186,21 @@ function render() {
     $('#main').innerHTML = '<div class="empty">Φόρτωση…</div>';
     return;
   }
-  renderFilter();
+  renderPeople();
   if (state.view === 'month') renderMonth();
   else renderWeek();
 }
 
-function renderFilter() {
+/** The big circles: tap one to see only that person's activities, tap it again to see everyone's. */
+function renderPeople() {
   const members = state.data.members.filter((m) => !m.hidden);
-  const box = $('#who-filter');
-  box.hidden = members.length < 2;
-  const all = !state.filter.length;
-  box.innerHTML = `<button type="button" class="who${all ? ' on' : ''}" data-id="">Όλοι</button>${members.map((m) =>
-    `<button type="button" class="who${state.filter.includes(m.id) ? ' on' : ''}" data-id="${m.id}" style="--c:${m.color}"><i class="dot" style="background:${m.color}"></i>${esc(m.name)}</button>`).join('')}`;
+  if (state.filter.length && !members.some((m) => m.id === state.filter[0])) state.filter = [];
+  const box = $('#people');
+  box.hidden = !members.length;
+  const picked = state.filter[0];
+  box.classList.toggle('picking', !!picked);
+  box.innerHTML = members.map((m) => `<button type="button" class="person${m.id === picked ? ' on' : ''}" data-id="${m.id}"
+      style="--c:${m.color}" aria-pressed="${m.id === picked}"><span class="ph">${avatar(m)}</span><span class="nm">${esc(m.name)}</span></button>`).join('');
 }
 
 function renderWeek() {
@@ -478,7 +486,10 @@ async function deleteEvent() {
 function renderSettings() {
   $('#settings-email').textContent = supa.userEmail();
   const row = (kind, x, i, list) => `
-    <div class="manage-row${x.hidden ? ' hidden-cat' : ''}" data-kind="${kind}" data-id="${x.id}">
+    <div class="manage-row${x.hidden ? ' hidden-cat' : ''}${kind === 'members' ? ' with-photo' : ''}" data-kind="${kind}" data-id="${x.id}">
+      ${kind === 'members' ? `<span class="mini-ph" style="--c:${x.color}">
+        <button type="button" class="mini-av" data-act="photo" aria-label="${x.photo ? 'Άλλαξε φωτογραφία' : 'Βάλε φωτογραφία'}">${avatar(x)}</button>
+        ${x.photo ? '<button type="button" class="mini-x" data-act="nophoto" aria-label="Αφαίρεση φωτογραφίας"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>' : ''}</span>` : ''}
       <button type="button" class="swatch" data-act="color" style="background:${x.color}" aria-label="Χρώμα"></button>
       <input class="field" value="${esc(x.name)}" data-act="name" aria-label="Όνομα">
       <button type="button" class="icon-btn" data-act="hide" title="${x.hidden ? 'Εμφάνιση' : 'Απόκρυψη'}" aria-label="${x.hidden ? 'Εμφάνιση' : 'Απόκρυψη'}">${x.hidden
@@ -488,6 +499,33 @@ function renderSettings() {
     </div>`;
   $('#member-list').innerHTML = state.data.members.map((x, i, l) => row('members', x, i, l)).join('') || '<p class="small muted">Κανένα μέλος ακόμα.</p>';
   $('#cat-list').innerHTML = state.data.categories.map((x, i, l) => row('categories', x, i, l)).join('');
+}
+
+/**
+ * Turns a photo from the phone or tablet into a small square JPEG (data URL), cut from the middle
+ * and a little towards the top, where faces usually are.
+ */
+async function shrinkPhoto(file, size = 320) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const w = img.naturalWidth;
+    const h = img.naturalHeight;
+    const s = Math.min(w, h);
+    const c = document.createElement('canvas');
+    c.width = size;
+    c.height = size;
+    c.getContext('2d').drawImage(img, (w - s) / 2, (h - s) * 0.3, s, s, 0, 0, size, size);
+    for (const q of [0.85, 0.7, 0.55]) {
+      const data = c.toDataURL('image/jpeg', q);
+      if (data.length < 190000) return data;
+    }
+    throw new Error('too big');
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 async function settingsCall(fn, okMsg) {
@@ -527,7 +565,14 @@ function initSettings() {
     const kind = row.dataset.kind;
     const items = list(kind);
     const x = items.find((i) => i.id === Number(row.dataset.id));
-    if (b.dataset.act === 'color') {
+    if (b.dataset.act === 'photo') {
+      // Opened here, inside the tap, so phones and tablets allow the picker.
+      $('#photo-input').dataset.id = x.id;
+      $('#photo-input').value = '';
+      $('#photo-input').click();
+    } else if (b.dataset.act === 'nophoto') {
+      settingsCall(() => api.memberPhoto(x.id, null), 'Η φωτογραφία αφαιρέθηκε');
+    } else if (b.dataset.act === 'color') {
       const next = PALETTE[(PALETTE.indexOf(x.color) + 1) % PALETTE.length];
       settingsCall(() => save(kind, { ...x, color: next }));
     } else if (b.dataset.act === 'hide') {
@@ -546,6 +591,20 @@ function initSettings() {
     const name = e.target.value.trim();
     if (!name) { e.target.value = x.name; return; }
     if (name !== x.name) settingsCall(() => save(row.dataset.kind, { ...x, name }), 'Μετονομάστηκε');
+  });
+  $('#photo-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    const id = Number(e.target.dataset.id);
+    if (!file || !id) return;
+    let photo;
+    try {
+      photo = await shrinkPhoto(file);
+    } catch {
+      $('#settings-err').textContent = 'Δεν άνοιξε αυτή η φωτογραφία. Δοκίμασε άλλη.';
+      $('#settings-err').hidden = false;
+      return;
+    }
+    settingsCall(() => api.memberPhoto(id, photo), 'Η φωτογραφία μπήκε');
   });
   const unused = (items) => PALETTE.find((c) => !items.some((i) => i.color === c)) || PALETTE[items.length % PALETTE.length];
   $('#member-add').addEventListener('submit', async (e) => {
@@ -669,7 +728,7 @@ function openOccurrence(id, date) {
 
 function init() {
   const prefs = loadJson(PREFS_KEY, {});
-  state.filter = Array.isArray(prefs.filter) ? prefs.filter : [];
+  state.filter = Array.isArray(prefs.filter) && prefs.filter.length === 1 ? prefs.filter : [];
   const hash = location.hash.slice(1);
   state.view = VIEWS.includes(hash) ? hash : (VIEWS.includes(prefs.view) ? prefs.view : 'week');
   try {
@@ -687,13 +746,11 @@ function init() {
   $('#refresh').addEventListener('click', () => fetchData());
   $('#fab').addEventListener('click', () => openEvent());
 
-  $('#who-filter').addEventListener('click', (e) => {
-    const b = e.target.closest('.who');
+  $('#people').addEventListener('click', (e) => {
+    const b = e.target.closest('.person');
     if (!b) return;
     const id = Number(b.dataset.id);
-    if (!id) state.filter = [];
-    else state.filter = state.filter.includes(id) ? state.filter.filter((x) => x !== id) : [...state.filter, id];
-    if (state.filter.length >= state.data.members.filter((m) => !m.hidden).length) state.filter = [];
+    state.filter = state.filter[0] === id ? [] : [id];
     savePrefs();
     render();
   });
