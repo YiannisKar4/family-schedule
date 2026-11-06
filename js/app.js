@@ -1,12 +1,12 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=7';
-import * as api from './api.js?v=7';
-import { ApiError } from './api.js?v=7';
-import { STORAGE_PREFIX } from './config.js?v=7';
+import * as supa from './supa.js?v=8';
+import * as api from './api.js?v=8';
+import { ApiError } from './api.js?v=8';
+import { STORAGE_PREFIX } from './config.js?v=8';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=7';
+} from './dates.js?v=8';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -254,9 +254,7 @@ function renderWeek() {
   }).join('');
 
   const empty = !occ.length ? `<p class="empty small">Τίποτα αυτή την εβδομάδα. Πάτα σε μια ώρα ή στο «Νέο» για να προσθέσεις.</p>` : '';
-  const noMembers = !state.data.members.length
-    ? '<div class="note">Πρόσθεσε τα μέλη της οικογένειας από τις <b>Ρυθμίσεις</b> (γρανάζι πάνω δεξιά), για να ξέρεις ποιος έχει τι.</div>' : '';
-  $('#main').innerHTML = `${noMembers}
+  $('#main').innerHTML = `
     <div class="week card">
       <div class="wk-head"><div class="gutter"></div>${head}</div>
       ${allDayRow}
@@ -346,7 +344,7 @@ function fillChoices(ev) {
   const members = state.data.members.filter((m) => !m.hidden || ev?.members.includes(m.id));
   $('#f-members').innerHTML = members.length ? members.map((m) =>
     `<button type="button" class="pick" data-v="${m.id}" aria-pressed="false" style="--c:${m.color}"><i class="dot" style="background:${m.color}"></i>${esc(m.name)}</button>`).join('')
-    : '<span class="small muted">Πρόσθεσε μέλη από τις Ρυθμίσεις.</span>';
+    : '<span class="small muted">Δεν υπάρχουν μέλη.</span>';
   $('#title-suggestions').innerHTML = state.data.titles.map((t) => `<option value="${esc(t.title)}"></option>`).join('');
 }
 
@@ -633,12 +631,6 @@ function initSettings() {
     settingsCall(() => api.memberPhoto(id, photo), 'Η φωτογραφία μπήκε');
   });
   const unused = (items) => PALETTE.find((c) => !items.some((i) => i.color === c)) || PALETTE[items.length % PALETTE.length];
-  $('#member-add').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const name = $('#member-new').value.trim();
-    if (!name) return;
-    if (await settingsCall(() => api.saveMember({ name, color: unused(state.data.members) }), 'Προστέθηκε')) $('#member-new').value = '';
-  });
   $('#cat-add').addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = $('#cat-new').value.trim();

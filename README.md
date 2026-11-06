@@ -62,7 +62,7 @@ Phone / laptop ──► GitHub Pages (this repo: HTML + JS, no build step)
 3. GitHub: **Settings → Pages**, deploy from branch **main**, folder **/ (root)**.
 
 The first visit creates the starting categories (Σχολείο, Δουλειά, Ποδόσφαιρο, Λογοθεραπεία,
-Γιατρός, Οικογένεια, Άλλο). Then add the family members in **Ρυθμίσεις**.
+Γιατρός, Οικογένεια, Άλλο). The family members are added once with SQL (see CLAUDE.md); the site has no button for new members.
 
 ## Developing locally
 
