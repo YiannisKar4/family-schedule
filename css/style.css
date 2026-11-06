@@ -358,11 +358,12 @@ dialog.ask { width: min(400px, calc(100vw - 32px)); border-radius: 18px; border:
 .person .initial { font-size: 15px; font-weight: 700; color: var(--c); }
 .person .nm { font-size: 12px; font-weight: 600; line-height: 1.2; }
 .person:active { transform: scale(0.96); }
-.person.on .ph { box-shadow: 0 0 0 2px var(--surface-1), 0 0 0 4px var(--c); }
+/* Picked: a soft glow in the person's colour around the circle. */
+.person.on .ph { box-shadow: 0 0 6px 2px color-mix(in srgb, var(--c) 70%, transparent), 0 0 14px 2px color-mix(in srgb, var(--c) 35%, transparent); }
 .person.on .nm { color: var(--text-primary); }
 .people.picking .person:not(.on) { opacity: 0.4; filter: grayscale(0.6); }
 /* Wide or sideways screen: the circles sit in the top bar, between the week and «Σήμερα». */
-.people.in-bar { flex: 1 1 auto; min-width: 0; justify-content: flex-start; gap: 6px; padding: 6px; margin: -6px 0; max-width: none; }
+.people.in-bar { flex: 1 1 auto; min-width: 0; justify-content: flex-start; gap: 14px; padding: 10px 12px; margin: -10px 0; max-width: none; }
 .people.in-bar > :first-child { margin-left: auto; }
 .people.in-bar > :last-child { margin-right: auto; }
 .people.in-bar ~ .spacer { display: none; }
@@ -371,13 +372,13 @@ dialog.ask { width: min(400px, calc(100vw - 32px)); border-radius: 18px; border:
 .people.in-bar .initial { font-size: 14px; }
 .people.in-bar .nm { display: none; }
 @media (min-width: 1000px) {
-  .people.in-bar { gap: 14px; }
+  .people.in-bar { gap: 18px; }
   .people.in-bar .person { flex-direction: row; gap: 6px; }
   .people.in-bar .nm { display: block; font-size: 13px; }
 }
 @media (max-width: 899px) { .topbar-inner:has(.people.in-bar:not([hidden])) .brand { display: none; } }
 /* Upright phone: the circles sit in the bottom bar, and «Εβδομάδα» / «Μήνας» become icons. */
-.tabs:has(.people.in-tabs:not([hidden])) { justify-content: flex-start; gap: 2px; padding-left: 6px; padding-right: 6px; }
+.tabs:has(.people.in-tabs:not([hidden])) { justify-content: flex-start; gap: 4px; padding-left: 14px; padding-right: 8px; }
 .tabs:has(.people.in-tabs:not([hidden])) .tab { flex: none; width: 44px; font-size: 0; gap: 0; padding: 10px 0; align-self: center; }
 .tabs:has(.people.in-tabs:not([hidden])) .tab svg { width: 24px; height: 24px; }
 .tabs:has(.people.in-tabs:not([hidden])) .tab[aria-selected="true"] { background: var(--accent-soft); }
@@ -387,7 +388,8 @@ dialog.ask { width: min(400px, calc(100vw - 32px)); border-radius: 18px; border:
 }
 .people.in-tabs > :first-child { margin-left: auto; }
 .people.in-tabs > :last-child { margin-right: auto; }
-.people.in-tabs .person { padding: 4px 4px 2px; }
+.people.in-tabs { padding-top: 8px; padding-bottom: 2px; }
+.people.in-tabs .person { padding: 2px 4px 0; }
 .people.in-tabs .nm { font-size: 11px; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 359px) {
   .tabs:has(.people.in-tabs:not([hidden])) .tab { width: 40px; }
@@ -431,11 +433,11 @@ main { padding-top: 12px; }
 .wk-head > .gutter, .wk-allday > .gutter, .wk-grid > .gutter { position: sticky; left: 0; z-index: 4; }
 .wk-head > .gutter, .wk-allday > .gutter { background: var(--surface-1); }
 .wk-day {
-  border: 0; background: none; cursor: pointer; padding: 5px 0 7px; display: flex; flex-direction: column; align-items: center; gap: 1px;
+  border: 0; background: none; cursor: pointer; padding: 5px 0; display: flex; flex-direction: row; justify-content: center; align-items: center; gap: 5px;
   color: var(--text-secondary); border-radius: 0;
 }
-.wk-day .wd { font-size: 11px; line-height: 14px; }
-.wk-day .dn { font-size: 15px; font-weight: 650; color: var(--text-primary); width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; }
+.wk-day .wd { font-size: 12px; line-height: 14px; }
+.wk-day .dn { font-size: 15px; font-weight: 650; color: var(--text-primary); width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; }
 .wk-day.today .dn { background: var(--accent); color: var(--accent-ink); }
 .wk-day.today .wd { color: var(--accent); font-weight: 600; }
 .wk-day:hover .dn { background: var(--surface-sunk); }
@@ -505,7 +507,7 @@ main { padding-top: 12px; }
   .ev-s { font-size: 10px; column-gap: 2px; }
   .faces i { width: 16px; height: 16px; font-size: 9px; }
   .faces i + i { margin-left: -6px; }
-  .wk-day .dn { width: 24px; height: 24px; font-size: 14px; }
+  .wk-day .dn { width: 22px; height: 22px; font-size: 14px; }
 }
 
 /* chips: all-day row and month cells */
@@ -634,13 +636,15 @@ textarea.field { resize: vertical; min-height: 44px; }
   .tab svg { width: 18px; height: 18px; }
   .fab { bottom: calc(48px + env(safe-area-inset-bottom)); }
   .people.in-bar .ph { width: 28px; }
-  .wk-day { flex-direction: row; justify-content: center; gap: 5px; padding: 4px 0; }
-  .wk-day .dn { width: 22px; height: 22px; font-size: 14px; }
+  .wk-day { padding: 4px 0; }
 }
 
 /* On a phone the calendar runs edge to edge, so no width is lost at the sides. */
 @media (max-width: 600px), (max-height: 500px) and (orientation: landscape) {
   .week, .month { margin-left: -16px; margin-right: -16px; border-radius: 0; border-left: 0; border-right: 0; box-shadow: none; }
+  /* No gap between the top bar and the calendar. */
+  main { padding-top: 0; }
+  .week, .month { border-top: 0; }
 }
 @media (max-width: 360px) {
   .week, .month { margin-left: -12px; margin-right: -12px; }
