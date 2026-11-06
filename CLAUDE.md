@@ -40,21 +40,12 @@ Family members: Γιάννης, Αθηνά, Πάνος, Νικόλας (Πάνο
    `https://yianniskar4.github.io/family-schedule/**` (keep the budget's).
 4. GitHub → Settings → Pages: deploy from `main`, `/ (root)`.
 
-## Open item: sign-in email template
+## Sign-in email template
 
-The Magic Link template is one per Supabase project and currently holds his custom HTML for the budget.
-Plan: one template that branches on the requesting site, keeping his budget HTML untouched:
-
-```
-{{ if eq .RedirectTo "https://yianniskar4.github.io/family-schedule/" }}
-  schedule version, same style as his budget HTML, only title and text changed
-{{ else }}
-  his existing budget HTML, as is
-{{ end }}
-```
-
-Waiting for him to paste his current HTML. Subject stays shared (e.g. "Σύνδεση στα οικογενειακά").
-This only works once step 3 above is done; otherwise RedirectTo falls back to the budget's Site URL.
+The Magic Link template is one per Supabase project. `supabase/magic-link-email.html` holds one template
+that branches on `.RedirectTo`: the schedule gets its own text, everything else gets his budget HTML as is.
+He pastes it into Supabase → Authentication → Emails → Magic Link. Subject stays shared
+(e.g. "Σύνδεση στα οικογενειακά"). Works only once the schedule's Redirect URL is allowed.
 
 ## Working on the code
 
