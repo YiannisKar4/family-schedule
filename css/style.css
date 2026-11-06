@@ -367,6 +367,9 @@ dialog.ask { width: min(400px, calc(100vw - 32px)); border-radius: 18px; border:
 .ev.faded:hover, .chip.faded:hover, .ag-row.faded:hover { background: color-mix(in srgb, var(--c) 12%, var(--surface-1)); }
 /* The faces stay in colour, so who is on it shows even when faded. */
 .faded .faces { opacity: 0.85; }
+/* Cancelled: still on the calendar, struck through and greyed. */
+.ev.cancelled, .chip.cancelled, .ag-row.cancelled { border-left-style: dashed; opacity: 0.6; }
+.cancelled .ev-t, .chip.cancelled, .ag-row.cancelled b { text-decoration: line-through; }
 .ev, .chip, .ag-row { transition: background-color 0.35s ease, border-color 0.35s ease, color 0.35s ease; }
 .ev .ev-s, .chip b, .ag-row b, .ag-row .muted, .faces { transition: color 0.35s ease, opacity 0.35s ease; }
 @media (prefers-reduced-motion: reduce) {
