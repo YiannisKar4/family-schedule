@@ -1,12 +1,12 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=3';
-import * as api from './api.js?v=3';
-import { ApiError } from './api.js?v=3';
-import { STORAGE_PREFIX } from './config.js?v=3';
+import * as supa from './supa.js?v=4';
+import * as api from './api.js?v=4';
+import { ApiError } from './api.js?v=4';
+import { STORAGE_PREFIX } from './config.js?v=4';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=3';
+} from './dates.js?v=4';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
