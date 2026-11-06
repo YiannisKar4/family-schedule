@@ -65,3 +65,6 @@ this site's files: the page network-first, `?v=` files cache-first (so the `?v=`
 
 Known limit: on a narrow phone, overlapping events in the week view truncate their titles;
 the day list (tap the day name) shows them in full.
+
+If a GitHub Pages deploy hangs ("updating_pages", then "Timeout reached" after 10 minutes, and a re-run sits
+queued and cannot be cancelled), it is on GitHub's side. Start a fresh build with a new commit to `main`.
