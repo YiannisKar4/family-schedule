@@ -47,6 +47,11 @@ that branches on `.RedirectTo`: the schedule gets its own text, everything else 
 He pastes it into Supabase → Authentication → Emails → Magic Link. Subject stays shared
 (e.g. "Σύνδεση στα οικογενειακά"). Works only once the schedule's Redirect URL is allowed.
 
+A brand new email gets the Confirm signup template instead of Magic Link (Supabase's default is English).
+`supabase/confirm-signup-email.html` is the same two designs for that template; he pastes it into
+Authentication → Emails → Confirm signup. The sender name ("Οικογενειακά Έξοδα") is in the SMTP settings
+and is shared with the budget.
+
 ## Working on the code
 
 Work on a branch, open a PR and merge it into `main` yourself, without asking: he said a mistake can be rolled back.
