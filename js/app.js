@@ -1,12 +1,12 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=4';
-import * as api from './api.js?v=4';
-import { ApiError } from './api.js?v=4';
-import { STORAGE_PREFIX } from './config.js?v=4';
+import * as supa from './supa.js?v=5';
+import * as api from './api.js?v=5';
+import { ApiError } from './api.js?v=5';
+import { STORAGE_PREFIX } from './config.js?v=5';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=4';
+} from './dates.js?v=5';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -23,7 +23,7 @@ const state = {
   view: 'week',
   anchor: today(),
   data: null, // { members, categories, events, titles, from, to }
-  filter: [], // [member id] to show one person; empty = everyone
+  filter: [], // member ids whose activities stand out; the rest fade. Empty = none fade.
   loading: false,
   lastFetch: 0,
   editing: null, // { event, date } while the event window is open
@@ -150,13 +150,15 @@ function colorOf(ev) {
   return m ? m.color : 'var(--accent)';
 }
 
-function visible(ev) {
+/** True when the activity is one of the picked people's, or a family one (nobody set), or nobody is picked. */
+function picked(ev) {
   if (!state.filter.length || !ev.members.length) return true;
   return ev.members.some((id) => state.filter.includes(id));
 }
+const fade = (ev) => (picked(ev) ? '' : ' faded');
 
 function occurrences(from, to) {
-  return expand(state.data.events, from, to).filter((o) => visible(o.event));
+  return expand(state.data.events, from, to);
 }
 
 const timeText = (o) => (o.allDay ? 'Όλη μέρα' : `${o.start}–${o.end}`);
@@ -191,16 +193,18 @@ function render() {
   else renderWeek();
 }
 
-/** The big circles: tap one to see only that person's activities, tap it again to see everyone's. */
+/**
+ * The circles: tap one or more to make their activities stand out (the others fade but stay),
+ * tap again to let go.
+ */
 function renderPeople() {
   const members = state.data.members.filter((m) => !m.hidden);
-  if (state.filter.length && !members.some((m) => m.id === state.filter[0])) state.filter = [];
+  state.filter = state.filter.filter((id) => members.some((m) => m.id === id));
   const box = $('#people');
   box.hidden = !members.length;
-  const picked = state.filter[0];
-  box.classList.toggle('picking', !!picked);
-  box.innerHTML = members.map((m) => `<button type="button" class="person${m.id === picked ? ' on' : ''}" data-id="${m.id}"
-      style="--c:${m.color}" aria-pressed="${m.id === picked}"><span class="ph">${avatar(m)}</span><span class="nm">${esc(m.name)}</span></button>`).join('');
+  box.classList.toggle('picking', state.filter.length > 0);
+  box.innerHTML = members.map((m) => { const on = state.filter.includes(m.id); return `<button type="button" class="person${on ? ' on' : ''}" data-id="${m.id}"
+      style="--c:${m.color}" aria-pressed="${on}"><span class="ph">${avatar(m)}</span><span class="nm">${esc(m.name)}</span></button>`; }).join('');
 }
 
 function renderWeek() {
@@ -232,7 +236,7 @@ function renderWeek() {
       const h = Math.max(((minutes(o.end) - minutes(o.start)) / 60) * HOUR_PX, 22);
       const w = 100 / o.lanes;
       const short = h < 36;
-      return `<button type="button" class="ev${short ? ' short' : ''}" data-id="${o.event.id}" data-date="${d}"
+      return `<button type="button" class="ev${short ? ' short' : ''}${fade(o.event)}" data-id="${o.event.id}" data-date="${d}"
         style="top:${top}px;height:${h - 2}px;left:calc(${o.lane * w}% + 1px);width:calc(${w}% - 2px);--c:${colorOf(o.event)}">
         <span class="ev-t">${esc(o.event.title)}</span>${short ? '' : `<span class="ev-s">${o.start}${dots(o.event) ? ` ${dots(o.event)}` : ''}</span>`}</button>`;
     }).join('');
@@ -260,7 +264,7 @@ function renderWeek() {
 
 function chip(o, day) {
   const cont = o.date < day ? ' cont' : '';
-  return `<button type="button" class="chip${cont}" data-id="${o.event.id}" data-date="${o.date}" style="--c:${colorOf(o.event)}">${o.allDay ? '' : `<b>${o.start}</b> `}${esc(o.event.title)}</button>`;
+  return `<button type="button" class="chip${cont}${fade(o.event)}" data-id="${o.event.id}" data-date="${o.date}" style="--c:${colorOf(o.event)}">${o.allDay ? '' : `<b>${o.start}</b> `}${esc(o.event.title)}</button>`;
 }
 
 function renderMonth() {
@@ -275,7 +279,9 @@ function renderMonth() {
   $('#main').innerHTML = `<div class="month card">
     <div class="mo-head">${DAY_SHORT.map((d) => `<div>${d}</div>`).join('')}</div>
     <div class="mo-grid">${cells.map((d) => {
-      const list = occ.filter((o) => o.date <= d && o.endDate >= d);
+      // The picked people's activities first, so they are not hidden behind "+N".
+      const list = occ.filter((o) => o.date <= d && o.endDate >= d)
+        .sort((a, b) => Number(picked(b.event)) - Number(picked(a.event)));
       const more = list.length - max;
       return `<div class="mo-cell${d.slice(0, 7) !== m ? ' out' : ''}${d === t ? ' today' : ''}" data-day="${d}" role="button" tabindex="0" aria-label="${esc(longDate(d))}, ${list.length} δραστηριότητες">
         <span class="mo-dn">${Number(d.slice(8))}</span>
@@ -292,7 +298,7 @@ function openDay(d) {
   const list = occurrences(d, d);
   $('#day-title').textContent = longDate(d);
   $('#day-list').innerHTML = list.length ? list.map((o) => `
-    <button type="button" class="ag-row" data-id="${o.event.id}" data-date="${o.date}" style="--c:${colorOf(o.event)}">
+    <button type="button" class="ag-row${fade(o.event)}" data-id="${o.event.id}" data-date="${o.date}" style="--c:${colorOf(o.event)}">
       <span class="ag-time">${o.allDay ? 'Όλη<br>μέρα' : `${o.start}<br><span class="muted">${o.end}</span>`}</span>
       <span class="ag-main"><b>${esc(o.event.title)}</b>
         <span class="small muted">${esc([membersText(o.event), o.event.location].filter(Boolean).join(' · '))}${o.series ? ' · ↻' : ''}</span></span>
@@ -736,7 +742,7 @@ function openOccurrence(id, date) {
 
 function init() {
   const prefs = loadJson(PREFS_KEY, {});
-  state.filter = Array.isArray(prefs.filter) && prefs.filter.length === 1 ? prefs.filter : [];
+  state.filter = Array.isArray(prefs.filter) ? prefs.filter.filter(Number.isInteger) : [];
   const hash = location.hash.slice(1);
   state.view = VIEWS.includes(hash) ? hash : (VIEWS.includes(prefs.view) ? prefs.view : 'week');
   try {
@@ -758,7 +764,7 @@ function init() {
     const b = e.target.closest('.person');
     if (!b) return;
     const id = Number(b.dataset.id);
-    state.filter = state.filter[0] === id ? [] : [id];
+    state.filter = state.filter.includes(id) ? state.filter.filter((x) => x !== id) : [...state.filter, id];
     savePrefs();
     render();
   });

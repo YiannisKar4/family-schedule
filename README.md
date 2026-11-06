@@ -10,8 +10,8 @@ Live at **https://yianniskar4.github.io/family-schedule/**
   Tap a day's name to see that day as a list.
 - **Μήνας**: the month grid. Tap a day to see its list and add to it.
 - **Ποιος** (big circles above the calendar, one per person, with their photo or initial):
-  tap one to see only that person's activities, tap it again to see everyone's.
-  Activities with nobody set (family things) always show.
+  tap one or more to make their activities stand out; the others fade but stay on screen.
+  Tap a circle again to let it go. Activities with nobody set (family things) never fade.
 - **+ Νέο**: add in a few taps. Typing a title used before (e.g. "Ποδόσφαιρο") fills in its usual
   category, people, time and place.
 - **Επανάληψη**: every week or every two weeks, on the days you pick, until a date or with no end.

@@ -355,6 +355,9 @@ dialog.ask { width: min(400px, calc(100vw - 32px)); border-radius: 18px; border:
 .person.on .ph { box-shadow: 0 0 0 clamp(2px, 0.36vw, 3px) var(--surface-1), 0 0 0 clamp(4px, 0.72vw, 6px) var(--c); }
 .person.on .nm { color: var(--text-primary); }
 .people.picking .person:not(.on) { opacity: 0.4; filter: grayscale(0.6); }
+/* Activities of people not picked: still there, but in the background. */
+.ev.faded, .chip.faded, .ag-row.faded { opacity: 0.3; filter: grayscale(0.8); }
+.ev.faded:hover, .chip.faded:hover, .ag-row.faded:hover { opacity: 0.6; }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; vertical-align: middle; }
 
 main { padding-top: 12px; }
