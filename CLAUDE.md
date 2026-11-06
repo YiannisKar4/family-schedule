@@ -49,6 +49,9 @@ He pastes it into Supabase → Authentication → Emails → Magic Link. Subject
 
 ## Working on the code
 
+Work on a branch, open a PR and merge it into `main` yourself, without asking: he said a mistake can be rolled back.
+Still answer questions with an answer, not with a change.
+
 See README.md. Before pushing: `npm run test:db`, `npm run test:expand`, and a look at the site in the
 mock (`node dev/supabase-mock.mjs`, sign in as a@example.com, code at
 http://localhost:8091/__mail?email=a@example.com). After changing any `.js` or `.css`, raise every `?v=`.
