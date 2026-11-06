@@ -1,0 +1,114 @@
+<!-- Supabase → Authentication → Emails → Templates → Confirm signup → Body. Keep {{ .ConfirmationURL }} and {{ .Token }} as they are.
+     Sent instead of the Magic Link the first time an email signs in (a new user). Same two designs as magic-link-email.html:
+     the schedule gets its own text, everything else gets the budget text.
+     Needs https://yianniskar4.github.io/family-schedule/** in Redirect URLs, otherwise RedirectTo falls back to the Site URL. -->
+{{ if or (eq .RedirectTo "https://yianniskar4.github.io/family-schedule/") (eq .RedirectTo "https://yianniskar4.github.io/family-schedule/index.html") }}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f6f6f3;padding:24px 12px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <tr><td align="center">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+
+      <!-- header -->
+      <tr><td style="background:#2a78d6;background-image:linear-gradient(135deg,#2a78d6 0%,#6250d6 100%);padding:32px 28px 26px;text-align:center;">
+        <div style="font-size:44px;line-height:1;">📅</div>
+        <div style="color:#ffffff;font-size:24px;font-weight:700;margin-top:12px;letter-spacing:-0.3px;">Ποιος πάει πού σήμερα;</div>
+        <div style="color:#dbe7fb;font-size:14px;margin-top:6px;">Πρώτη φορά εδώ με αυτό το email; Καλώς ήρθες 👋</div>
+      </td></tr>
+
+      <!-- fake mini week -->
+      <tr><td style="padding:22px 28px 0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr valign="top">
+          <td style="padding:0 2px;text-align:center;font-size:11px;color:#898781;">Δε<div style="height:8px;background:#2a78d6;opacity:0.6;border-radius:3px;margin-top:5px;"></div><div style="height:8px;background:#1baf7a;opacity:0.6;border-radius:3px;margin-top:3px;"></div></td>
+          <td style="padding:0 2px;text-align:center;font-size:11px;color:#898781;">Τρ<div style="height:8px;background:#e87ba4;opacity:0.6;border-radius:3px;margin-top:5px;"></div><div style="height:8px;background:#eda100;opacity:0.6;border-radius:3px;margin-top:3px;"></div></td>
+          <td style="padding:0 2px;text-align:center;font-size:11px;color:#898781;">Τε<div style="height:8px;background:#2a78d6;opacity:0.6;border-radius:3px;margin-top:5px;"></div><div style="height:8px;background:#1baf7a;opacity:0.6;border-radius:3px;margin-top:3px;"></div><div style="height:8px;background:#eda100;opacity:0.6;border-radius:3px;margin-top:3px;"></div></td>
+          <td style="padding:0 2px;text-align:center;font-size:11px;color:#898781;">Πε<div style="height:8px;background:#e87ba4;opacity:0.6;border-radius:3px;margin-top:5px;"></div></td>
+          <td style="padding:0 2px;text-align:center;font-size:11px;color:#898781;">Πα<div style="height:8px;background:#2a78d6;opacity:0.6;border-radius:3px;margin-top:5px;"></div><div style="height:8px;background:#e87ba4;opacity:0.6;border-radius:3px;margin-top:3px;"></div><div style="height:8px;background:#1baf7a;opacity:0.6;border-radius:3px;margin-top:3px;"></div><div style="height:8px;background:#eda100;opacity:0.6;border-radius:3px;margin-top:3px;"></div></td>
+          <td style="padding:0 2px;text-align:center;font-size:11px;color:#898781;">Σα<div style="height:8px;background:#e34948;border-radius:3px;margin-top:5px;"></div></td>
+          <td style="padding:0 2px;text-align:center;font-size:11px;color:#898781;">Κυ<div style="font-size:16px;line-height:1;margin-top:4px;">↑</div></td>
+        </tr></table>
+        <div style="font-size:12px;color:#898781;text-align:right;margin-top:4px;">Κυριακή: επιτέλους τίποτα(NOT!)</div>
+      </td></tr>
+
+      <!-- text + button -->
+      <tr><td style="padding:18px 28px 6px;color:#0b0b0b;font-size:16px;line-height:1.5;">
+        Hey, μην τον τρελάνεις στο χωσέ τον άλλον... να είσαι καλάκι, οχι σκατάκι 💩
+      </td></tr>
+      <tr><td align="center" style="padding:18px 28px;">
+        <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#2a78d6;color:#ffffff;text-decoration:none;font-size:17px;font-weight:700;padding:15px 34px;border-radius:999px;">Μπες στο πρόγραμμα →</a>
+      </td></tr>
+
+      <!-- code -->
+      <tr><td style="padding:4px 28px 8px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#efeee9;border-radius:12px;"><tr><td align="center" style="padding:16px;">
+          <div style="font-size:13px;color:#52514e;">ή γράψε στη σελίδα τον κωδικό</div>
+          <div style="font-size:30px;font-weight:700;letter-spacing:8px;color:#0b0b0b;margin-top:6px;font-family:'SF Mono',Menlo,Consolas,monospace;">{{ .Token }}</div>
+        </td></tr></table>
+      </td></tr>
+
+      <!-- small print -->
+      <tr><td style="padding:16px 28px 26px;color:#52514e;font-size:13px;line-height:1.55;">
+        ⏳ Λήγει σύντομα και δουλεύει μόνο μία φορά, γι'αυτό μην είσαι γύλλος και πάτα το<br>
+        🕵️ Δεν το ζήτησες εσύ; Μάλλον ήταν ο άλλος, που ψάχνει πάλι ποιος έχει σειρά να πάει τα παιδιά. Αγνόησέ το.
+      </td></tr>
+
+      <!-- footer -->
+      <tr><td style="border-top:1px solid #e9e8e2;padding:16px 28px;text-align:center;color:#898781;font-size:12px;">
+        Μητσάκι &amp; Καντζάκι ❤️<br><b style="color:#52514e;">Οικογενειακό πρόγραμμα</b>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+{{ else }}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f6f6f3;padding:24px 12px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <tr><td align="center">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+
+      <!-- header -->
+      <tr><td style="background:#2a78d6;background-image:linear-gradient(135deg,#2a78d6 0%,#6250d6 100%);padding:32px 28px 26px;text-align:center;">
+        <div style="font-size:44px;line-height:1;">💸</div>
+        <div style="color:#ffffff;font-size:24px;font-weight:700;margin-top:12px;letter-spacing:-0.3px;">Μου χεις φάει τα λεφτά!</div>
+        <div style="color:#dbe7fb;font-size:14px;margin-top:6px;">Πρώτη φορά εδώ με αυτό το email; Καλώς ήρθες 👋</div>
+      </td></tr>
+
+      <!-- fake mini chart -->
+      <tr><td style="padding:22px 28px 0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr valign="bottom" style="height:64px;">
+          <td style="padding:0 3px;" valign="bottom"><div style="height:22px;background:#2a78d6;opacity:0.35;border-radius:4px 4px 0 0;"></div></td>
+          <td style="padding:0 3px;" valign="bottom"><div style="height:34px;background:#2a78d6;opacity:0.35;border-radius:4px 4px 0 0;"></div></td>
+          <td style="padding:0 3px;" valign="bottom"><div style="height:18px;background:#2a78d6;opacity:0.35;border-radius:4px 4px 0 0;"></div></td>
+          <td style="padding:0 3px;" valign="bottom"><div style="height:40px;background:#1baf7a;opacity:0.5;border-radius:4px 4px 0 0;"></div></td>
+          <td style="padding:0 3px;" valign="bottom"><div style="height:28px;background:#eda100;opacity:0.5;border-radius:4px 4px 0 0;"></div></td>
+          <td style="padding:0 3px;" valign="bottom"><div style="height:64px;background:#e34948;border-radius:4px 4px 0 0;"></div></td>
+        </tr></table>
+        <div style="font-size:12px;color:#898781;text-align:right;margin-top:6px;">↑ εδώ κάποιος έλιωνε στο Trendyol</div>
+      </td></tr>
+
+      <!-- text + button -->
+      <tr><td style="padding:18px 28px 6px;color:#0b0b0b;font-size:16px;line-height:1.5;">
+        Κάποιος από τους δυο σας θέλει να δει πού πήγαν τα λεφτά. Θαρραλέο. 🫡
+      </td></tr>
+      <tr><td align="center" style="padding:18px 28px;">
+        <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#2a78d6;color:#ffffff;text-decoration:none;font-size:17px;font-weight:700;padding:15px 34px;border-radius:999px;">Μπες, και κλάψε →</a>
+      </td></tr>
+
+      <!-- code -->
+      <tr><td style="padding:4px 28px 8px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#efeee9;border-radius:12px;"><tr><td align="center" style="padding:16px;">
+          <div style="font-size:13px;color:#52514e;">ή γράψε στη σελίδα τον κωδικό</div>
+          <div style="font-size:30px;font-weight:700;letter-spacing:8px;color:#0b0b0b;margin-top:6px;font-family:'SF Mono',Menlo,Consolas,monospace;">{{ .Token }}</div>
+        </td></tr></table>
+      </td></tr>
+
+      <!-- small print -->
+      <tr><td style="padding:16px 28px 26px;color:#52514e;font-size:13px;line-height:1.55;">
+        ⏳ Λήγει σύντομα και δουλεύει μόνο μία φορά, γι'αυτό μην είσαι γύλλος και πάτα το<br>
+        🕵️ Δεν το ζήτησες εσύ; Μάλλον ήταν ο άλλος, που ψάχνει πάλι ποιος ξόδεψε τα «Λοιπά / έκτακτα». Αγνόησέ το.
+      </td></tr>
+
+      <!-- footer -->
+      <tr><td style="border-top:1px solid #e9e8e2;padding:16px 28px;text-align:center;color:#898781;font-size:12px;">
+        Μητσάκι &amp; Καντζάκι ❤️<br><b style="color:#52514e;">Οικογενειακά έξοδα</b>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+{{ end }}
