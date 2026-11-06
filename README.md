@@ -18,7 +18,7 @@ Live at **https://yianniskar4.github.io/family-schedule/**
   category, people, time and place.
 - **Επανάληψη**: every week or every two weeks, on the days you pick, until a date or with no end.
   Changing or deleting one date asks: **Μόνο αυτή**, **Αυτή και επόμενες** or **Όλες**.
-- **Ρυθμίσεις** (gear): family members and categories, each with a colour. Tap a member's circle to
+- **Ρυθμίσεις** (gear): family members and categories, each with a colour (tap it to see all colours and pick one). Tap a member's circle to
   give them a photo (the site shrinks it to a small square before saving). With a photo already there,
   the same tap offers Αλλαγή or Αφαίρεση. Hidden ones stay on old
   activities but are not offered for new ones.
