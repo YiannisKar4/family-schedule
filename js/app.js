@@ -1,14 +1,14 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=31';
-import * as api from './api.js?v=31';
-import * as live from './live.js?v=31';
-import { ApiError } from './api.js?v=31';
-import { STORAGE_PREFIX } from './config.js?v=31';
-import { attachPlaces } from './places.js?v=31';
+import * as supa from './supa.js?v=32';
+import * as api from './api.js?v=32';
+import * as live from './live.js?v=32';
+import { ApiError } from './api.js?v=32';
+import { STORAGE_PREFIX } from './config.js?v=32';
+import { attachPlaces } from './places.js?v=32';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=31';
+} from './dates.js?v=32';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -227,7 +227,6 @@ function renderPeople() {
  * Updates the circles and the faded activities in place, without drawing the calendar again,
  * so the change fades smoothly instead of jumping.
  */
-let reorderTimer;
 function applyPicks() {
   const box = $('#people');
   box.classList.toggle('picking', state.filter.length > 0);
@@ -386,9 +385,7 @@ function renderMonth() {
   $('#main').innerHTML = `<div class="month card" style="${cellH}">
     <div class="mo-head">${DAY_SHORT.map((d) => `<div>${d}</div>`).join('')}</div>
     <div class="mo-grid">${cells.map((d) => {
-      // The picked people's activities first, so they are not hidden behind "+N".
-      const list = occ.filter((o) => o.date <= d && o.endDate >= d)
-        .sort((a, b) => Number(picked(b.event)) - Number(picked(a.event)));
+      const list = occ.filter((o) => o.date <= d && o.endDate >= d);
       const more = list.length - max;
       return `<div class="mo-cell${d.slice(0, 7) !== m ? ' out' : ''}${d === t ? ' today' : ''}" data-day="${d}" role="button" tabindex="0" aria-label="${esc(longDate(d))}, ${list.length} δραστηριότητες">
         <span class="mo-dn">${Number(d.slice(8))}</span>
@@ -1025,9 +1022,6 @@ function init() {
     state.filter = state.filter.includes(id) ? state.filter.filter((x) => x !== id) : [...state.filter, id];
     savePrefs();
     applyPicks();
-    // The month lists the picked people's activities first: reorder once the fade has played.
-    clearTimeout(reorderTimer);
-    if (state.view === 'month') reorderTimer = setTimeout(() => { if (!document.querySelector('dialog[open]')) render(); }, 400);
   });
 
   $('#main').addEventListener('click', (e) => {
