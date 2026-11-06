@@ -1,13 +1,13 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=10';
-import * as api from './api.js?v=10';
-import * as live from './live.js?v=10';
-import { ApiError } from './api.js?v=10';
-import { STORAGE_PREFIX } from './config.js?v=10';
+import * as supa from './supa.js?v=11';
+import * as api from './api.js?v=11';
+import * as live from './live.js?v=11';
+import { ApiError } from './api.js?v=11';
+import { STORAGE_PREFIX } from './config.js?v=11';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=10';
+} from './dates.js?v=11';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -371,6 +371,28 @@ function fillChoices(ev) {
   $('#title-suggestions').innerHTML = state.data.titles.map((t) => `<option value="${esc(t.title)}"></option>`).join('');
 }
 
+/** "Άλλο", or no category: the activity needs its own title. Any other category is its own title. */
+function needsTitle(catId) {
+  const c = catId && categoryById(catId);
+  return !c || c.name.trim().toLowerCase() === 'άλλο';
+}
+
+/** Shows "Τι" only where it says something: for "Άλλο", no category, or an older activity with its own title. */
+function syncTitle() {
+  const cat = form.category;
+  const own = state.editing && state.editing.event.category === cat
+    && state.editing.event.title !== categoryById(cat)?.name;
+  $('#title-box').hidden = !(needsTitle(cat) || own);
+}
+
+/** A link that opens the place in Maps (the app on a phone or tablet). */
+function syncMap() {
+  const place = $('#f-location').value.trim();
+  const a = $('#f-map');
+  a.hidden = !place;
+  a.href = place ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}` : '';
+}
+
 /**
  * Opens the window for a new activity (preset: date, start) or an existing one (ev, on the date tapped).
  */
@@ -402,14 +424,18 @@ function openEvent({ ev = null, date = null, start = null } = {}) {
     note.textContent = `↻ ${ev.repeatEvery > 1 ? `Κάθε ${ev.repeatEvery} εβδομάδες` : 'Κάθε εβδομάδα'}: ${ev.repeatDays.map((d) => DAY_SHORT[d - 1]).join(', ')}, από ${shortDate(ev.date)}${ev.repeatUntil ? ` έως ${shortDate(ev.repeatUntil)}` : ''}. Εδώ βλέπεις την ${longDate(date)}.`;
   }
   syncAllDay();
+  syncTitle();
+  syncMap();
   $('#event-dlg').showModal();
-  if (!ev) setTimeout(() => $('#f-title').focus(), 50);
 }
 
-/** Typing a title used before fills in its usual category, people, time and place. */
-function applyTemplate() {
+/**
+ * A title used before (typed, or the name of the category picked) fills in its usual
+ * category, people, time and place.
+ */
+function applyTemplate(title = $('#f-title').value) {
   if (state.editing) return;
-  const name = $('#f-title').value.trim().toLowerCase();
+  const name = title.trim().toLowerCase();
   const t = state.data.titles.find((x) => x.title.toLowerCase() === name);
   if (!t) return;
   if (!form.category && t.category) form.category = t.category;
@@ -422,13 +448,16 @@ function applyTemplate() {
   }
   if (!$('#f-location').value && t.location) $('#f-location').value = t.location;
   syncAllDay();
+  syncTitle();
+  syncMap();
 }
 
 function readForm() {
   const allDay = $('#f-allday').checked;
   const date = $('#f-date').value;
+  const titled = !$('#title-box').hidden;
   const ev = {
-    title: $('#f-title').value.trim(),
+    title: titled ? $('#f-title').value.trim() : (categoryById(form.category)?.name || ''),
     category: form.category,
     members: form.members,
     date,
@@ -441,7 +470,7 @@ function readForm() {
     repeatEvery: form.repeat || 1,
     repeatUntil: form.repeat ? $('#f-until').value : '',
   };
-  if (!ev.title) return [null, 'Γράψε τι είναι.'];
+  if (!ev.title) return [null, form.category ? 'Γράψε τι είναι.' : 'Διάλεξε κατηγορία ή γράψε τι είναι.'];
   if (!date) return [null, 'Διάλεξε ημερομηνία.'];
   if (!allDay && !ev.start) return [null, 'Βάλε ώρα έναρξης ή διάλεξε «Όλη μέρα».'];
   if (!allDay && ev.end && ev.end <= ev.start) return [null, 'Η ώρα λήξης πρέπει να είναι μετά την έναρξη.'];
@@ -858,14 +887,18 @@ function init() {
   });
   $('#f-category').addEventListener('click', (e) => {
     const b = e.target.closest('.pick');
-    if (b) form.category = b.getAttribute('aria-pressed') === 'true' ? null : Number(b.dataset.v);
+    if (!b) return;
+    form.category = b.getAttribute('aria-pressed') === 'true' ? null : Number(b.dataset.v);
+    syncTitle();
+    if (form.category && !needsTitle(form.category)) applyTemplate(categoryById(form.category).name);
   });
+  $('#f-location').addEventListener('input', syncMap);
   $('#f-members').addEventListener('click', (e) => {
     const b = e.target.closest('.pick');
     if (b) b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
   });
   $('#f-allday').addEventListener('change', syncAllDay);
-  $('#f-title').addEventListener('change', applyTemplate);
+  $('#f-title').addEventListener('change', () => applyTemplate());
   $('#f-start').addEventListener('change', () => {
     const s = $('#f-start').value;
     state.timeTouched = true;
