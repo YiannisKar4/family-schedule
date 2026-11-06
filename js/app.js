@@ -1,14 +1,14 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=20';
-import * as api from './api.js?v=20';
-import * as live from './live.js?v=20';
-import { ApiError } from './api.js?v=20';
-import { STORAGE_PREFIX } from './config.js?v=20';
-import { attachPlaces } from './places.js?v=20';
+import * as supa from './supa.js?v=21';
+import * as api from './api.js?v=21';
+import * as live from './live.js?v=21';
+import { ApiError } from './api.js?v=21';
+import { STORAGE_PREFIX } from './config.js?v=21';
+import { attachPlaces } from './places.js?v=21';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=20';
+} from './dates.js?v=21';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -21,6 +21,8 @@ const PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300
 // Height of one hour in the week view; taller on a phone, where the columns are narrow.
 const narrow = matchMedia('(max-width: 600px)');
 const hourPx = () => (narrow.matches ? 60 : 44);
+// Weeks drawn on either side of the shown week, so a swipe glides on without redrawing.
+const WEEKS_AROUND = 4;
 const wide = () => matchMedia('(min-width: 700px)').matches;
 
 const state = {
@@ -93,7 +95,7 @@ function ask({ title, text = '', buttons }) {
 function neededRange() {
   if (state.view === 'week') {
     const f = weekStart(state.anchor);
-    return [f, addDays(f, 6)];
+    return [addDays(f, -7 * WEEKS_AROUND), addDays(f, 7 * WEEKS_AROUND + 6)];
   }
   const g = monthGrid(state.anchor);
   return [g[0], g[41]];
@@ -239,9 +241,9 @@ function applyPicks() {
 
 function renderWeek() {
   const from = weekStart(state.anchor);
-  // The days run on: the week before and after are drawn too, so a swipe flows into them.
-  const first = addDays(from, -7);
-  const days = Array.from({ length: 21 }, (_, i) => addDays(first, i));
+  // The days run on: a few weeks before and after are drawn too, so a swipe flows into them.
+  const first = addDays(from, -7 * WEEKS_AROUND);
+  const days = Array.from({ length: 7 * (2 * WEEKS_AROUND + 1) }, (_, i) => addDays(first, i));
   $('#range-label').textContent = rangeLabel(from, addDays(from, 6));
   const occ = occurrences(days[0], days[days.length - 1]);
   const t = today();
@@ -304,9 +306,10 @@ function renderWeek() {
 
 /**
  * A week shows (on a phone about three and a half days of it) and the days run on into the
- * weeks before and after. The day names follow the sideways scroll. When the scroll stops in another week, that
- * week becomes the shown one and the strip is drawn again around it, at the same place, so
- * nothing jumps. On a phone a week opens on today, elsewhere on its Monday.
+ * weeks around it. The day names follow the sideways scroll. When the scroll stops in another
+ * week, that week becomes the shown one without drawing anything again; only near the ends of
+ * what is drawn is it drawn again around the new week, at the same place.
+ * On a phone a week opens on today, elsewhere on its Monday.
  */
 let settleTimer;
 let touching = false;
@@ -315,26 +318,30 @@ function weekScroll(from, first) {
   const top = $('.wk-top');
   const gut = body.querySelector('.wk-grid > .gutter').offsetWidth;
   const dayW = body.querySelector('.wk-col').getBoundingClientRect().width;
+  const count = body.querySelectorAll('.wk-col').length;
+  const last = addDays(first, count - 1);
   const t = today();
   let day = from;
-  if (state.weekDay && state.weekDay.week === from) day = state.weekDay.day;
+  if (state.weekDay && state.weekDay.day >= first && state.weekDay.day <= last) day = state.weekDay.day;
   else if (narrow.matches && t >= from && t <= addDays(from, 6)) day = t;
   body.scrollLeft = body.querySelector(`.wk-col[data-day="${day}"]`).offsetLeft - gut;
   top.scrollLeft = body.scrollLeft;
-  state.weekDay = { week: from, day };
+  state.weekDay = { day };
 
   const settle = () => {
     if (touching || !document.body.contains(body)) return;
-    const week = weekStart(state.weekDay.day);
-    if (week === from || document.querySelector('dialog[open]')) return;
-    state.anchor = state.weekDay.day;
-    state.weekDay = { week, day: state.weekDay.day };
-    show();
+    const d = state.weekDay.day;
+    if (weekStart(d) === weekStart(state.anchor)) return;
+    state.anchor = d;
+    const [f, to] = neededRange();
+    if (!state.data || f < state.data.from || to > state.data.to) return fetchData({ quiet: true });
+    // Close to the ends of what is drawn: draw again around this week (the picture stays put).
+    if ((d < addDays(first, 7) || d > addDays(last, -10)) && !document.querySelector('dialog[open]')) render();
   };
   body.addEventListener('scroll', () => {
     top.scrollLeft = body.scrollLeft;
-    const d = addDays(first, Math.max(0, Math.round(body.scrollLeft / dayW)));
-    state.weekDay = { week: from, day: d };
+    const d = addDays(first, Math.min(count - 1, Math.max(0, Math.round(body.scrollLeft / dayW))));
+    state.weekDay = { day: d };
     const w = weekStart(d);
     $('#range-label').textContent = rangeLabel(w, addDays(w, 6));
     clearTimeout(settleTimer);
@@ -914,6 +921,7 @@ function step(n) {
       return;
     }
     state.anchor = addDays(state.anchor, 7 * n);
+    state.weekDay = null;
     return show();
   }
   state.anchor = state.view === 'week' ? addDays(state.anchor, 7 * n) : addMonths(state.anchor, n);
@@ -923,7 +931,7 @@ function step(n) {
 
 function setView(view, anchor = null) {
   state.view = VIEWS.includes(view) ? view : 'week';
-  if (anchor) state.anchor = anchor;
+  if (anchor) { state.anchor = anchor; state.weekDay = null; }
   savePrefs();
   if (location.hash.slice(1) !== state.view) history.replaceState(null, '', `#${state.view}`);
   show();
@@ -950,7 +958,14 @@ function init() {
   window.addEventListener('hashchange', () => { if (VIEWS.includes(location.hash.slice(1))) setView(location.hash.slice(1)); });
   $('#prev').addEventListener('click', () => step(-1));
   $('#next').addEventListener('click', () => step(1));
-  $('#today').addEventListener('click', () => { state.anchor = today(); state.weekDay = null; show(); });
+  $('#today').addEventListener('click', () => {
+    // In the week view, glide to today when it is drawn; otherwise jump.
+    const body = $('.wk-body');
+    const t = today();
+    const target = state.view === 'week' && body && body.querySelector(`.wk-col[data-day="${narrow.matches ? t : weekStart(t)}"]`);
+    if (target) return body.scrollTo({ left: target.offsetLeft - body.querySelector('.wk-grid > .gutter').offsetWidth, behavior: 'smooth' });
+    state.anchor = t; state.weekDay = null; show();
+  });
   $('#refresh').addEventListener('click', () => fetchData());
   $('#fab').addEventListener('click', () => openEvent());
 
