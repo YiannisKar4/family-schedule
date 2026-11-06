@@ -41,6 +41,9 @@ create table if not exists sched_members (
   archived     boolean not null default false,
   unique (household_id, name)
 );
+-- A small square photo, as a data URL (the site shrinks it before saving). Null: show the initial.
+alter table sched_members add column if not exists photo text
+  check (photo is null or (photo ~ '^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$' and length(photo) <= 200000));
 
 -- What kind of activity: Σχολείο, Δουλειά, Ποδόσφαιρο, Λογοθεραπεία, …
 create table if not exists sched_categories (
@@ -237,7 +240,8 @@ begin
   end if;
   return json_build_object(
     'ok', true,
-    'members', coalesce((select json_agg(json_build_object('id', id, 'name', name, 'color', color, 'hidden', archived)
+    'members', coalesce((select json_agg(json_build_object('id', id, 'name', name, 'color', color, 'hidden', archived,
+                                                           'photo', photo)
                                          order by sort_order, id)
                          from sched_members where household_id = h), '[]'),
     'categories', coalesce((select json_agg(json_build_object('id', id, 'name', name, 'color', color, 'hidden', archived)
@@ -361,6 +365,20 @@ exception when unique_violation then
   raise exception 'Υπάρχει ήδη μέλος με όνομα %', n;
 end $$;
 
+-- Sets a member's photo (a data URL), or removes it with null or ''.
+create or replace function api_sched_member_photo(id smallint, photo text) returns json
+language plpgsql set search_path = public as $$
+declare h uuid := _sched_require(); p text := nullif(photo, ''); done smallint;
+begin
+  if p is not null and (p !~ '^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$' or length(p) > 200000) then
+    raise exception 'Η φωτογραφία δεν μπορεί να αποθηκευτεί. Δοκίμασε άλλη.';
+  end if;
+  update sched_members m set photo = p where m.household_id = h and m.id = api_sched_member_photo.id
+  returning m.id into done;
+  if done is null then raise exception 'Το μέλος δεν βρέθηκε'; end if;
+  return json_build_object('ok', true, 'id', done);
+end $$;
+
 -- Adds a category (id null) or changes one: name, color, hidden.
 create or replace function api_sched_save_category(category jsonb) returns json
 language plpgsql set search_path = public as $$
@@ -405,11 +423,11 @@ end $$;
 -- Only signed-in users may call the website API; Row Level Security does the rest.
 revoke execute on function api_sched_read(text, text), api_sched_add(jsonb),
   api_sched_update(uuid, jsonb, text, text), api_sched_delete(uuid, text, text),
-  api_sched_save_member(jsonb), api_sched_save_category(jsonb), api_sched_order(text, smallint[])
+  api_sched_save_member(jsonb), api_sched_member_photo(smallint, text), api_sched_save_category(jsonb), api_sched_order(text, smallint[])
   from public, anon;
 grant execute on function api_sched_read(text, text), api_sched_add(jsonb),
   api_sched_update(uuid, jsonb, text, text), api_sched_delete(uuid, text, text),
-  api_sched_save_member(jsonb), api_sched_save_category(jsonb), api_sched_order(text, smallint[])
+  api_sched_save_member(jsonb), api_sched_member_photo(smallint, text), api_sched_save_category(jsonb), api_sched_order(text, smallint[])
   to authenticated;
 revoke all on function sched_household(), _sched_require(), _sched_date(text, text), _sched_time(text),
   _sched_color(text), _sched_json(sched_events), _sched_values(uuid, jsonb), sched_touch() from anon, public;

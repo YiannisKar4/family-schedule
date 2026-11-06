@@ -78,6 +78,21 @@ assert.deepEqual(d.members.map((m) => m.name), ['Νίκος', 'Γιάννης'])
 assert.equal(d.members[1].color, '#2a78d6');
 ok('members: add, rename, order, validation');
 
+// Photos
+const PIC = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==';
+await rpc(A, 'api_sched_member_photo', [m1, PIC]);
+d = await read();
+assert.equal(d.members.find((m) => m.id === m1).photo, PIC);
+assert.equal(d.members.find((m) => m.id === m2).photo, null);
+await rejects(rpc(A, 'api_sched_member_photo', [m1, 'javascript:alert(1)']), /φωτογραφία/, 'not an image');
+await rejects(rpc(A, 'api_sched_member_photo', [m1, `data:image/jpeg;base64,${'A'.repeat(200001)}`]), /φωτογραφία/, 'too big');
+await rejects(rpc('other@example.com', 'api_sched_member_photo', [m1, PIC]), /δεν βρέθηκε/, 'other household photo');
+await rpc(A, 'api_sched_save_member', [{ id: m1, name: 'Γιάννης', color: '#2a78d6' }]);
+assert.equal((await read()).members.find((m) => m.id === m1).photo, PIC, 'saving the name keeps the photo');
+await rpc(A, 'api_sched_member_photo', [m1, '']);
+assert.equal((await read()).members.find((m) => m.id === m1).photo, null);
+ok('member photos: set, remove, validation, household only');
+
 const school = d.categories.find((c) => c.name === 'Σχολείο').id;
 const football = d.categories.find((c) => c.name === 'Ποδόσφαιρο').id;
 

@@ -7,8 +7,8 @@
   <meta name="theme-color" content="#2a78d6">
   <title>Οικογενειακό πρόγραμμα</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232a78d6'/%3E%3Crect x='7' y='9' width='18' height='15' rx='2.5' fill='none' stroke='white' stroke-width='2.4'/%3E%3Cpath d='M7 14h18M12 6v5M20 6v5' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="css/style.css?v=1">
-  <script type="module" src="js/app.js?v=1"></script>
+  <link rel="stylesheet" href="css/style.css?v=2">
+  <script type="module" src="js/app.js?v=2"></script>
 </head>
 <body>
   <header class="topbar">
@@ -31,8 +31,8 @@
       <button class="tab" role="tab" data-view="week"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M9 9v12M15 9v12"/></svg>Εβδομάδα</button>
       <button class="tab" role="tab" data-view="month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M7 13h.01M12 13h.01M17 13h.01M7 17h.01M12 17h.01M17 17h.01"/></svg>Μήνας</button>
     </nav>
-    <div class="who-filter" id="who-filter" role="group" aria-label="Ποιος"></div>
   </div>
+  <div class="people" id="people" role="group" aria-label="Ποιος" hidden></div>
 
   <main id="main"></main>
 
@@ -123,7 +123,8 @@
       </div>
       <p class="small muted">Συνδεδεμένος ως <b id="settings-email"></b></p>
       <h3 class="manage-h">Μέλη οικογένειας</h3>
-      <p class="small muted">Πάτα το χρώμα για να το αλλάξεις. Γράψε πάνω στο όνομα για μετονομασία.</p>
+      <p class="small muted">Πάτα τον κύκλο για φωτογραφία, το χρώμα για να το αλλάξεις. Γράψε πάνω στο όνομα για μετονομασία.</p>
+      <input type="file" id="photo-input" accept="image/*" hidden>
       <div id="member-list" class="manage-list"></div>
       <form id="member-add" class="manage-add" novalidate>
         <input class="field" id="member-new" autocomplete="off" placeholder="Νέο μέλος" aria-label="Όνομα νέου μέλους">
