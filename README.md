@@ -6,7 +6,7 @@ GitHub Pages for the site, the same Supabase project for the data and the email 
 
 Live at **https://yianniskar4.github.io/family-schedule/**
 
-- **Εβδομάδα**: Monday to Sunday by the hour, with an all-day row. Tap an empty hour to add something at that time.
+- **Εβδομάδα**: Monday to Sunday by the hour. An all-day activity is a tinted band down all the hours of its days, with its title at the top. Tap an empty hour to add something at that time.
   Tap a day's name to see that day as a list.
 - **Μήνας**: the month grid. Tap a day to see its list and add to it.
 - **Ποιος** (one circle per person, with their photo or initial; always in sight: in the top bar on a sideways phone, a tablet or a computer, in the bottom bar on an upright phone):

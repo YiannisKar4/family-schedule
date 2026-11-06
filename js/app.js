@@ -235,7 +235,7 @@ function applyPicks() {
     b.classList.toggle('on', on);
     b.setAttribute('aria-pressed', String(on));
   });
-  document.querySelectorAll('.ev[data-id], .chip[data-id], .ag-row[data-id]').forEach((el) => {
+  document.querySelectorAll('.ev[data-id], .chip[data-id], .ag-row[data-id], .ad[data-id], .ad-t[data-id]').forEach((el) => {
     const ev = state.data.events.find((x) => x.id === el.dataset.id);
     if (ev) el.classList.toggle('faded', !picked(ev));
   });
@@ -263,8 +263,6 @@ function renderWeek() {
 
   const head = days.map((d, i) => `<button type="button" class="wk-day${i % 7 > 4 ? ' we' : ''}${d === t ? ' today' : ''}" data-day="${d}">
       <span class="wd">${DAY_SHORT[i % 7]}</span><span class="dn">${Number(d.slice(8))}</span></button>`).join('');
-  const allDayRow = allDay.some((l) => l.length) ? `<div class="wk-allday"><div class="gutter small muted">όλη<br>μέρα</div>${allDay.map((list, i) =>
-    `<div class="ad-cell${i % 7 > 4 ? ' we' : ''}">${list.map((o) => chip(o, days[i])).join('')}</div>`).join('')}</div>` : '';
   const gutter = Array.from({ length: hours }, (_, i) => `<div class="hr" style="top:${i * HOUR_PX}px">${pad(startH + i)}:00</div>`).join('');
   const cols = timed.map((list, i) => {
     const d = days[i];
@@ -283,13 +281,22 @@ function renderWeek() {
         ${short ? `<span class="ev-row"><span class="ev-s">${o.start}</span><span class="ev-t">${esc(o.event.title)}</span></span>`
     : `<span class="ev-t">${esc(o.event.title)}</span><span class="ev-s"><span>${o.start}</span>${faces(o.event, true)}</span>`}</button>`;
     }).join('');
+    // All day: a tinted band down all the hours, behind the timed activities, with its title at the top.
+    // The band lets taps through to the hours; the title opens the activity.
+    const ad = allDay[i].map((o, k, l) => {
+      const w = 100 / l.length;
+      const pos = `left:calc(${k * w}% + 1px);width:calc(${w}% - 2px);--c:${colorOf(o.event)}`;
+      const cls = `${o.date < d ? ' cont' : ''}${fade(o.event)}${off(o.event)}`;
+      return `<div class="ad${cls}" data-id="${o.event.id}" style="${pos}"></div>
+        <button type="button" class="ad-t${cls}" data-id="${o.event.id}" data-date="${o.date}" style="${pos}">${faces(o.event, true)}${esc(o.event.title)}</button>`;
+    }).join('');
     let now = '';
     if (d === t) {
       const n = new Date();
       const m = n.getHours() * 60 + n.getMinutes() - startH * 60;
       if (m >= 0 && m <= hours * 60) now = `<div class="now" style="top:${(m / 60) * HOUR_PX}px"></div>`;
     }
-    return `<div class="wk-col${i % 7 ? '' : ' mon'}${i % 7 > 4 ? ' we' : ''}${d === t ? ' today' : ''}" data-day="${d}">${blocks}${now}</div>`;
+    return `<div class="wk-col${i % 7 ? '' : ' mon'}${i % 7 > 4 ? ' we' : ''}${d === t ? ' today' : ''}" data-day="${d}">${ad}${blocks}${now}</div>`;
   }).join('');
 
   const empty = !occ.some((o) => o.date <= addDays(from, 6) && (o.endDate || o.date) >= from) ? `<p class="empty small">Τίποτα αυτή την εβδομάδα. Πάτα σε μια ώρα ή στο «Νέο» για να προσθέσεις.</p>` : '';
@@ -297,7 +304,6 @@ function renderWeek() {
     <div class="week card" style="--n:${days.length}">
       <div class="wk-top"><div class="wk-head"><div class="gutter"></div>${head}</div></div>
       <div class="wk-body">
-        ${allDayRow}
         <div class="wk-grid" style="height:${hours * HOUR_PX}px;--hour:${HOUR_PX}px" data-start="${startH}">
           <div class="gutter">${gutter}</div>${cols}
         </div>
@@ -381,8 +387,9 @@ function renderMonth() {
   // Drop the last week when it is wholly in the next month.
   const cells = grid[35].slice(0, 7) !== m ? grid.slice(0, 35) : grid;
   const max = desktop.matches && monthFit ? monthFit.max : wide() ? 4 : 3;
-  const cellH = desktop.matches && monthFit ? `--mo-h:${monthFit.h}px` : '';
-  $('#main').innerHTML = `<div class="month card" style="${cellH}">
+  const cellH = desktop.matches && monthFit ? `--mo-h:${monthFit.h}px;` : '';
+  // Every day box is as tall as `max` rows, full or not, so the weeks line up.
+  $('#main').innerHTML = `<div class="month card" style="${cellH}--rows:${max}">
     <div class="mo-head">${DAY_SHORT.map((d) => `<div>${d}</div>`).join('')}</div>
     <div class="mo-grid">${cells.map((d) => {
       const list = occ.filter((o) => o.date <= d && o.endDate >= d);
@@ -963,7 +970,9 @@ function setView(view, anchor = null) {
   if (anchor) { state.anchor = anchor; state.weekDay = null; }
   savePrefs();
   if (location.hash.slice(1) !== state.view) history.replaceState(null, '', `#${state.view}`);
-  if (before === state.view || !state.data || matchMedia('(prefers-reduced-motion: reduce)').matches) return show();
+  // The other view opens from its top, not where this one was scrolled to.
+  const toTop = () => { if (before !== state.view) scrollTo(0, 0); };
+  if (before === state.view || !state.data || matchMedia('(prefers-reduced-motion: reduce)').matches) { show(); return toTop(); }
   // The old view fades away while it shrinks a little, then the new one grows in to full size.
   // Never above full size, so the page never grows past the window (no scroll bar flashing).
   const main = $('#main');
@@ -976,6 +985,7 @@ function setView(view, anchor = null) {
     main.style.opacity = '0';
     main.getAnimations().forEach((a) => a.cancel());
     show();
+    toTop();
     main.style.opacity = '';
     main.animate([{ opacity: 0, transform: 'scale(0.98)' }, { opacity: 1, transform: 'none' }],
       { duration: 260, easing: 'cubic-bezier(.2, .7, .3, 1)' });
@@ -1026,7 +1036,7 @@ function init() {
 
   $('#main').addEventListener('click', (e) => {
     if (!state.data) return;
-    const ev = e.target.closest('.ev, .chip');
+    const ev = e.target.closest('.ev, .chip, .ad-t');
     const cell = e.target.closest('.mo-cell');
     if (ev && (!cell || wide())) return openOccurrence(ev.dataset.id, ev.dataset.date);
     if (cell) return openDay(cell.dataset.day);
