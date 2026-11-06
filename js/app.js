@@ -1,14 +1,14 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=26';
-import * as api from './api.js?v=26';
-import * as live from './live.js?v=26';
-import { ApiError } from './api.js?v=26';
-import { STORAGE_PREFIX } from './config.js?v=26';
-import { attachPlaces } from './places.js?v=26';
+import * as supa from './supa.js?v=27';
+import * as api from './api.js?v=27';
+import * as live from './live.js?v=27';
+import { ApiError } from './api.js?v=27';
+import { STORAGE_PREFIX } from './config.js?v=27';
+import { attachPlaces } from './places.js?v=27';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=26';
+} from './dates.js?v=27';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -1070,16 +1070,21 @@ function init() {
   });
   // The circles stay in sight when the calendar scrolls: on a wide or sideways screen in the
   // top bar, between the week and «Σήμερα»; on an upright phone in the bottom bar, next to the tabs.
+  // A computer (mouse, wide screen) keeps them big in their own row under the tabs.
+  const desktop = matchMedia('(min-width: 900px) and (hover: hover) and (pointer: fine)');
   const peopleInBar = matchMedia('(orientation: landscape), (min-width: 700px)');
   const placePeople = () => {
     const box = $('#people');
-    if (peopleInBar.matches) $('#range-nav').after(box);
+    const where = desktop.matches ? 'row' : peopleInBar.matches ? 'bar' : 'tabs';
+    if (where === 'row') $('#tabs-wrap').after(box);
+    else if (where === 'bar') $('#range-nav').after(box);
     else $('.tabs').append(box);
-    box.classList.toggle('in-bar', peopleInBar.matches);
-    box.classList.toggle('in-tabs', !peopleInBar.matches);
+    box.classList.toggle('in-bar', where === 'bar');
+    box.classList.toggle('in-tabs', where === 'tabs');
   };
   placePeople();
   peopleInBar.addEventListener('change', placePeople);
+  desktop.addEventListener('change', placePeople);
   // The day names stick just under the top bar, whatever its height.
   const bar = $('.topbar');
   new ResizeObserver(() => document.documentElement.style.setProperty('--topbar-h', `${bar.offsetHeight}px`)).observe(bar);

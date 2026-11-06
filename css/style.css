@@ -649,3 +649,21 @@ textarea.field { resize: vertical; min-height: 44px; }
 @media (max-width: 360px) {
   .week, .month { margin-left: -12px; margin-right: -12px; }
 }
+
+/* Computer (mouse, wide screen): the calendar fills the window, the circles are big in their own
+   row, and the day names are as before. Phones and tablets are not affected. */
+@media (min-width: 900px) and (hover: hover) and (pointer: fine) {
+  .topbar-inner, .tabs-wrap, main, .people { max-width: none; }
+  .topbar-inner { padding-left: 24px; padding-right: 24px; }
+  .tabs-wrap { padding-left: 24px; padding-right: 24px; }
+  main { padding-left: 24px; padding-right: 24px; }
+  .people { gap: clamp(10px, 3.5vw, 40px); padding: 14px 16px 6px; }
+  .person { gap: 6px; }
+  .person .ph { width: clamp(38px, 10.2vw, 90px); border-width: 3px; }
+  .person .initial { font-size: clamp(16px, 4.2vw, 36px); }
+  .person .nm { font-size: clamp(13px, 2vw, 17px); }
+  .person.on .ph { box-shadow: 0 0 10px 3px color-mix(in srgb, var(--c) 70%, transparent), 0 0 24px 4px color-mix(in srgb, var(--c) 35%, transparent); }
+  .wk-day { flex-direction: column; gap: 1px; padding: 8px 0; }
+  .wk-day .wd { font-size: 12px; }
+  .wk-day .dn { width: 32px; height: 32px; font-size: 18px; }
+}
