@@ -1,14 +1,14 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=29';
-import * as api from './api.js?v=29';
-import * as live from './live.js?v=29';
-import { ApiError } from './api.js?v=29';
-import { STORAGE_PREFIX } from './config.js?v=29';
-import { attachPlaces } from './places.js?v=29';
+import * as supa from './supa.js?v=30';
+import * as api from './api.js?v=30';
+import * as live from './live.js?v=30';
+import { ApiError } from './api.js?v=30';
+import { STORAGE_PREFIX } from './config.js?v=30';
+import { attachPlaces } from './places.js?v=30';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=29';
+} from './dates.js?v=30';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -961,12 +961,30 @@ function step(n) {
 }
 
 function setView(view, anchor = null) {
+  const before = state.view;
   state.view = VIEWS.includes(view) ? view : 'week';
   if (anchor) { state.anchor = anchor; state.weekDay = null; }
   savePrefs();
   if (location.hash.slice(1) !== state.view) history.replaceState(null, '', `#${state.view}`);
-  show();
+  if (before === state.view || !state.data || matchMedia('(prefers-reduced-motion: reduce)').matches) return show();
+  // Week to month zooms out, month to week zooms in: the old view fades away, then the new one grows in.
+  const main = $('#main');
+  const toMonth = state.view === 'month';
+  const run = ++switchRun;
+  main.getAnimations().forEach((a) => a.cancel());
+  main.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: `scale(${toMonth ? 0.97 : 1.03})` }],
+    { duration: 140, easing: 'ease-in', fill: 'forwards' }).finished.then(() => {
+    if (run !== switchRun) return;
+    // Drawn at full size (the week and month measure themselves), hidden until the fade in starts.
+    main.style.opacity = '0';
+    main.getAnimations().forEach((a) => a.cancel());
+    show();
+    main.style.opacity = '';
+    main.animate([{ opacity: 0, transform: `scale(${toMonth ? 1.03 : 0.97})` }, { opacity: 1, transform: 'none' }],
+      { duration: 260, easing: 'cubic-bezier(.2, .7, .3, 1)' });
+  }, () => {});
 }
+let switchRun = 0;
 
 function openOccurrence(id, date) {
   const ev = state.data.events.find((e) => e.id === id);
