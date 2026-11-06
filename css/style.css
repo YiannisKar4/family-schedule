@@ -578,6 +578,12 @@ textarea.field { resize: vertical; min-height: 44px; }
   .field:not(.title-input):not(.amount-input) { font-size: 16px; }
 }
 
+/* On a phone «Νέο» is a round + button, upright and on its side. */
+@media (max-width: 600px), (max-height: 500px) and (orientation: landscape) {
+  .fab { height: 52px; width: 52px; padding: 0; justify-content: center; font-size: 0; gap: 0; }
+  .fab svg { width: 24px; height: 24px; }
+}
+
 /* Phone on its side: little height, so the bars shrink and the calendar gets the room. */
 @media (max-height: 500px) and (orientation: landscape) {
   body { padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
@@ -586,7 +592,7 @@ textarea.field { resize: vertical; min-height: 44px; }
   .tabs { padding: 2px 8px calc(2px + env(safe-area-inset-bottom)); }
   .tab { flex-direction: row; gap: 6px; padding: 5px 8px; font-size: 13px; }
   .tab svg { width: 18px; height: 18px; }
-  .fab { height: 44px; width: 44px; padding: 0; justify-content: center; font-size: 0; gap: 0; bottom: calc(48px + env(safe-area-inset-bottom)); }
+  .fab { bottom: calc(48px + env(safe-area-inset-bottom)); }
   .people { padding-top: 6px; }
   .person { flex-direction: row; gap: 6px; }
   .person .ph { width: 30px; }
