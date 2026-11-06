@@ -1,15 +1,15 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=33';
-import * as api from './api.js?v=33';
-import * as live from './live.js?v=33';
-import { ApiError } from './api.js?v=33';
-import { STORAGE_PREFIX } from './config.js?v=33';
-import { attachPlaces, attachSuggest } from './places.js?v=33';
-import { attachPicker, closePicker, closeOnOutside } from './pickers.js?v=33';
+import * as supa from './supa.js?v=34';
+import * as api from './api.js?v=34';
+import * as live from './live.js?v=34';
+import { ApiError } from './api.js?v=34';
+import { STORAGE_PREFIX } from './config.js?v=34';
+import { attachPlaces, attachSuggest } from './places.js?v=34';
+import { attachPicker, closePicker, closeOnOutside } from './pickers.js?v=34';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=33';
+} from './dates.js?v=34';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -484,11 +484,34 @@ function needsTitle(catId) {
 }
 
 /** Shows "Τι" only where it says something: for "Άλλο", no category, or an older activity with its own title. */
-function syncTitle() {
+/**
+ * «Τι» shows only with «Άλλο» (or for an activity that already has its own title).
+ * smooth: it opens and closes gently, so the window does not jump in size.
+ */
+function syncTitle(smooth = false) {
   const cat = form.category;
   const src = state.editing?.event || state.copyOf;
   const own = src && src.category === cat && src.title !== categoryById(cat)?.name;
-  $('#title-box').hidden = !(needsTitle(cat) || own);
+  const show = !!((cat && needsTitle(cat)) || own);
+  const box = $('#title-box');
+  const shown = !box.hidden && !box.dataset.hiding;
+  if (show === shown) return;
+  box.getAnimations().forEach((a) => a.cancel());
+  delete box.dataset.hiding;
+  if (!smooth || matchMedia('(prefers-reduced-motion: reduce)').matches) { box.hidden = !show; return; }
+  // Measured with overflow hidden, so the label's top margin counts inside the box both ways.
+  const was = !box.hidden;
+  box.hidden = false;
+  box.style.overflow = 'hidden';
+  const from = was ? box.offsetHeight : 0;
+  const to = show ? box.offsetHeight : 0;
+  if (!show) box.dataset.hiding = '1';
+  const anim = box.animate([{ height: `${from}px`, opacity: show ? 0 : 1 }, { height: `${to}px`, opacity: show ? 1 : 0 }],
+    { duration: show ? 260 : 200, easing: show ? 'cubic-bezier(.2, .8, .2, 1)' : 'ease-in' });
+  anim.finished.then(() => {
+    box.style.overflow = '';
+    if (!show) { box.hidden = true; delete box.dataset.hiding; }
+  }, () => { box.style.overflow = ''; });
 }
 
 /** A link that opens the place in Maps (the app on a phone or tablet). */
@@ -590,7 +613,7 @@ function applyTemplate(title = $('#f-title').value) {
 function readForm() {
   const allDay = $('#f-allday').checked;
   const date = $('#f-date').value;
-  const titled = !$('#title-box').hidden;
+  const titled = !$('#title-box').hidden && !$('#title-box').dataset.hiding;
   const ev = {
     title: titled ? $('#f-title').value.trim() : (categoryById(form.category)?.name || ''),
     category: form.category,
@@ -606,7 +629,7 @@ function readForm() {
     repeatEvery: form.repeat || 1,
     repeatUntil: form.repeat ? $('#f-until').value : '',
   };
-  if (!ev.title) return [null, form.category ? 'Γράψε τι είναι.' : 'Διάλεξε κατηγορία ή γράψε τι είναι.'];
+  if (!ev.title) return [null, form.category ? 'Γράψε τι είναι.' : 'Διάλεξε κατηγορία.'];
   if (!date) return [null, 'Διάλεξε ημερομηνία.'];
   if (!allDay && !ev.start) return [null, 'Βάλε ώρα έναρξης ή διάλεξε «Όλη μέρα».'];
   if (!allDay && ev.end && ev.end <= ev.start) return [null, 'Η ώρα λήξης πρέπει να είναι μετά την έναρξη.'];
@@ -1095,7 +1118,7 @@ function init() {
     const b = e.target.closest('.pick');
     if (!b) return;
     form.category = b.getAttribute('aria-pressed') === 'true' ? null : Number(b.dataset.v);
-    syncTitle();
+    syncTitle(true);
     if (form.category && !needsTitle(form.category)) applyTemplate(categoryById(form.category).name);
   });
   $('#f-location').addEventListener('input', syncMap);

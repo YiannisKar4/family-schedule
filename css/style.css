@@ -750,8 +750,8 @@ dialog.closing::backdrop { animation: fade-out 0.17s ease-in forwards; }
 .tab:active, .pick-field:active, .swatch:active, .palette button:active, .dp-day:active span { transform: scale(0.96); }
 .fab:active { transform: scale(0.92); }
 .btn, .icon-btn, .seg button, .pick, .day-picks button, .tab, .fab, .pick-field, .dp-day { -webkit-tap-highlight-color: transparent; }
-/* What shows up in the activity window (times, end date, repeat days, title) fades in. */
-#time-pair, #end-date-box, #repeat-box, #title-box { animation: reveal 0.22s ease; }
+/* What shows up in the activity window (times, end date, repeat days) fades in. */
+#time-pair, #end-date-box, #repeat-box { animation: reveal 0.22s ease; }
 
 /* ---------- date and time pickers ---------- */
 .pick-field {
@@ -813,6 +813,6 @@ dialog.closing::backdrop { animation: fade-out 0.17s ease-in forwards; }
 
 @media (prefers-reduced-motion: reduce) {
   dialog[open], dialog[open]::backdrop, dialog.closing, dialog.closing::backdrop,
-  #time-pair, #end-date-box, #repeat-box, #title-box, .dp-day.sel span { animation: none !important; }
+  #time-pair, #end-date-box, #repeat-box, .dp-day.sel span { animation: none !important; }
   .btn, .icon-btn, .seg button, .pick, .day-picks button, .tab, .fab, .pick-field, .tp-item { transition: none; }
 }
