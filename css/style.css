@@ -186,8 +186,12 @@ select { color-scheme: inherit; }
   .tab[aria-selected="true"] { background: var(--accent-soft); }
   .tabs-wrap { max-width: 1080px; margin: 0 auto; padding: 12px 16px 0; }
 }
+/* Upright tablet: the circles are in the top bar, so the bottom bar is short and needs less room under the page. */
+@media (min-width: 700px) and (max-width: 819px) { body { padding-bottom: calc(120px + env(safe-area-inset-bottom)); } }
 
 main { max-width: 1080px; margin: 0 auto; padding: 16px; }
+/* The month slides in from the side; what sticks out is cut, so the page never gets wider than the screen. */
+main { overflow-x: clip; }
 h1 { font-size: 22px; margin: 4px 0 14px; letter-spacing: -0.01em; }
 h2 { font-size: 16px; margin: 0; }
 
@@ -240,8 +244,13 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.4); }
   /* Sit just above the keyboard or the date/time wheel, and fit in what is left. */
   dialog { margin-bottom: var(--vv-below, 0px); max-height: min(92dvh, calc(var(--vv-h, 100dvh) - 12px)); }
 }
-.dlg { padding: 18px 16px 16px; }
+.dlg { --dlg-top: 18px; padding: var(--dlg-top) 16px 16px; }
 .dlg-head { display: flex; align-items: center; margin-bottom: 12px; }
+/* The title and the close button stay in sight while the window scrolls. */
+.dlg-head {
+  position: sticky; top: 0; z-index: 2; background: var(--surface-1);
+  margin: calc(-1 * var(--dlg-top)) -16px 4px; padding: var(--dlg-top) 16px 8px;
+}
 .dlg-head h2 { flex: 1; font-size: 18px; }
 label.lbl { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin: 12px 0 4px; }
 .amount-input { font-size: 28px !important; font-weight: 650; padding: 10px 12px !important; }
@@ -307,7 +316,7 @@ dialog { overflow-y: auto; overscroll-behavior: contain; }
   .amount-input { font-size: 24px !important; }
 }
 @media (max-height: 480px) and (orientation: landscape) {
-  .dlg { padding-top: 12px; }
+  .dlg { --dlg-top: 12px; }
   label.lbl { margin-top: 8px; }
   .amount-input { font-size: 22px !important; padding: 6px 10px !important; }
 }
@@ -321,6 +330,8 @@ dialog.ask { width: min(400px, calc(100vw - 32px)); border-radius: 18px; border:
 .ask-body .field { margin-top: 12px; font-size: 14px; }
 .ask-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 20px; }
 .ask-actions .btn { min-width: 96px; }
+/* Narrow phone: buttons that wrap fill the row, so they line up instead of a ragged stack. */
+@media (max-width: 400px) { .ask-actions .btn { flex: 1 1 auto; } }
 .btn.primary.danger-fill { background: var(--critical); color: #fff; }
 
 /* ======================================================= schedule ======= */
@@ -426,17 +437,17 @@ main { padding-top: 12px; }
 
 /* ---------- week ---------- */
 .week { padding: 0; overflow: clip; container-type: inline-size; --gut: 40px; --day: calc((100cqw - var(--gut)) / 7); }
-.wk-head, .wk-allday, .wk-grid { display: grid; grid-template-columns: var(--gut) repeat(var(--n, 7), var(--day)); }
+.wk-head, .wk-grid { display: grid; grid-template-columns: var(--gut) repeat(var(--n, 7), var(--day)); }
 /* The day names stay under the top bar; they follow the days when the week scrolls sideways. */
 .wk-top { position: sticky; top: var(--topbar-h, 57px); z-index: 5; overflow: hidden; background: var(--surface-1); border-bottom: 1px solid var(--axis); }
 .wk-body { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; scroll-snap-type: x mandatory; scroll-padding-left: var(--gut); }
 /* The week before and after sit on either side; a swipe glides there and stops at a Monday
    (on a phone at any day). As wide as all the days, so the hours on the left stay in place. */
-.wk-head, .wk-allday, .wk-grid { width: calc(var(--gut) + var(--n, 7) * var(--day)); }
+.wk-head, .wk-grid { width: calc(var(--gut) + var(--n, 7) * var(--day)); }
 .wk-col.mon { scroll-snap-align: start; }
 .wk-body::-webkit-scrollbar { display: none; }
-.wk-head > .gutter, .wk-allday > .gutter, .wk-grid > .gutter { position: sticky; left: 0; z-index: 4; }
-.wk-head > .gutter, .wk-allday > .gutter { background: var(--surface-1); }
+.wk-head > .gutter, .wk-grid > .gutter { position: sticky; left: 0; z-index: 4; }
+.wk-head > .gutter { background: var(--surface-1); }
 .wk-day {
   border: 0; background: none; cursor: pointer; padding: 5px 0; display: flex; flex-direction: row; justify-content: center; align-items: center; gap: 5px;
   color: var(--text-secondary); border-radius: 0;
@@ -448,9 +459,6 @@ main { padding-top: 12px; }
 .wk-day:hover .dn { background: var(--surface-sunk); }
 .wk-day.today:hover .dn { background: var(--accent); }
 .gutter { position: relative; font-size: 11px; color: var(--text-muted); text-align: right; padding-right: 6px; }
-.wk-allday { border-bottom: 1px solid var(--axis); }
-.wk-allday .gutter { padding-top: 4px; line-height: 1.2; font-size: 10px; }
-.ad-cell { padding: 3px 1px; display: flex; flex-direction: column; gap: 2px; min-width: 0; border-left: 1px solid var(--grid); }
 .wk-grid { position: relative; }
 .hr { position: absolute; right: 6px; transform: translateY(-50%); font-variant-numeric: tabular-nums; }
 .hr:first-child { transform: none; }
@@ -465,8 +473,26 @@ main { padding-top: 12px; }
 .wk-col.we { --band-a: color-mix(in srgb, var(--series-7) 13%, var(--surface-1)); --band-b: color-mix(in srgb, var(--series-7) 6%, var(--surface-1)); }
 .wk-col.today { --band-a: color-mix(in srgb, var(--accent) 15%, var(--surface-1)); --band-b: color-mix(in srgb, var(--accent) 8%, var(--surface-1)); }
 .wk-day.today { background-color: color-mix(in srgb, var(--accent) 10%, var(--surface-1)); }
-.ad-cell.we { background: color-mix(in srgb, var(--series-7) 6%, var(--surface-1)); }
 .wk-day.we:not(.today) .wd { color: var(--series-7); font-weight: 600; }
+/* All day: a band down all the hours, behind the timed activities; its title sits at the top. */
+.ad {
+  position: absolute; top: 0; bottom: 0; z-index: 1; pointer-events: none;
+  background: color-mix(in srgb, var(--c) 13%, transparent); border-left: 3px solid var(--c); border-radius: 6px;
+}
+.ad-t {
+  position: absolute; top: 0; z-index: 3; display: block; min-width: 0; text-align: left; cursor: pointer;
+  border: 0; border-left: 3px solid var(--c); border-radius: 6px 6px 6px 0; padding: 1px 4px;
+  background: color-mix(in srgb, var(--c) 30%, var(--surface-2)); color: var(--text-primary);
+  font-size: 11.5px; line-height: 1.35; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ad-t:hover { background: color-mix(in srgb, var(--c) 40%, var(--surface-2)); }
+.ad.cont, .ad-t.cont { border-left-style: dotted; }
+.ad.faded { background: color-mix(in srgb, var(--c) 5%, transparent); border-left-color: color-mix(in srgb, var(--c) 25%, var(--surface-2)); }
+.ad-t.faded { background: color-mix(in srgb, var(--c) 8%, var(--surface-1)); border-left-color: color-mix(in srgb, var(--c) 25%, var(--surface-2)); color: var(--text-muted); }
+.ad.cancelled, .ad-t.cancelled { border-left-style: dashed; opacity: 0.6; }
+.ad-t.cancelled { text-decoration: line-through; }
+.ad, .ad-t { transition: background-color 0.35s ease, border-color 0.35s ease, color 0.35s ease, opacity 0.35s ease; }
+@media (prefers-reduced-motion: reduce) { .ad, .ad-t { transition: none; } }
 .now { position: absolute; left: 0; right: 0; height: 2px; background: var(--critical); z-index: 3; pointer-events: none; }
 .now::before { content: ""; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--critical); }
 .ev {
@@ -510,6 +536,8 @@ main { padding-top: 12px; }
   .hr { right: 3px; }
   .ev { font-size: 11px; padding: 1px 2px 0 3px; border-left-width: 2px; border-radius: 4px; }
   .ev-s { font-size: 10px; column-gap: 2px; }
+  .ad, .ad-t { border-left-width: 2px; border-radius: 4px; }
+  .ad-t { font-size: 10.5px; padding: 1px 2px 1px 3px; border-radius: 4px 4px 4px 0; }
   .faces i { width: 16px; height: 16px; font-size: 9px; }
   .faces i + i { margin-left: -6px; }
   .wk-day .dn { width: 22px; height: 22px; font-size: 14px; }
@@ -547,6 +575,16 @@ main { padding-top: 12px; }
   .mo-cell .chip b { display: none; }
   .mo-dn { font-size: 12px; width: 22px; height: 22px; }
 }
+/* Each day box holds the same number of rows (--rows): an activity, «+N», or empty. All boxes
+   are the same height, so a busy day never makes its week taller. */
+.mo-cell { --pad-y: 3px; --dn: 24px; --row-h: 21px; }
+.mo-cell .chip, .mo-cell .more { flex: none; height: var(--row-h); line-height: calc(var(--row-h) - 2px); }
+.mo-cell .more { line-height: var(--row-h); }
+.month:not([style*="--mo-h"]) .mo-cell {
+  min-height: 0; overflow: hidden;
+  height: calc(1px + 2 * var(--pad-y) + var(--dn) + var(--rows, 3) * (var(--row-h) + 2px));
+}
+@media (max-width: 600px) { .mo-cell { --pad-y: 2px; --dn: 22px; --row-h: 17px; } }
 
 /* ---------- day window ---------- */
 .agenda { display: flex; flex-direction: column; gap: 6px; }
@@ -557,6 +595,9 @@ main { padding-top: 12px; }
 .ag-row:hover { background: color-mix(in srgb, var(--c) 8%, var(--surface-2)); }
 .ag-time { flex: none; width: 44px; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.35; }
 .ag-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+/* Faces level with the first line of the title. */
+.ag-main > b { display: flex; align-items: flex-start; }
+.ag-main > b > .faces.sm { margin-top: 3px; vertical-align: 0; }
 
 /* ---------- event window ---------- */
 .title-input { font-size: 18px; font-weight: 600; }
@@ -678,5 +719,6 @@ textarea.field { resize: vertical; min-height: 44px; }
   .wk-day .wd { font-size: 12px; }
   .wk-day .dn { width: 32px; height: 32px; font-size: 18px; }
   .month[style*="--mo-h"] .mo-cell { min-height: 0; height: var(--mo-h); overflow: hidden; }
+  .mo-cell { --row-h: 20px; }
 }
 
