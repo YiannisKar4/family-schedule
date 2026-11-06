@@ -1,5 +1,5 @@
 // Calls the api_sched_* functions in the database, with readable errors.
-import * as supa from './supa.js?v=27';
+import * as supa from './supa.js?v=28';
 
 export class ApiError extends Error {
   constructor(message, code = '') {

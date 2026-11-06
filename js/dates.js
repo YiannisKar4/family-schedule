@@ -66,7 +66,8 @@ export const shortDate = (s) => `${Number(s.slice(8))} ${MONTHS_SHORT[Number(s.s
 
 export function rangeLabel(from, to) {
   if (from.slice(0, 7) === to.slice(0, 7)) return `${Number(from.slice(8))}–${Number(to.slice(8))} ${MONTHS_SHORT[Number(from.slice(5, 7)) - 1]} ${from.slice(0, 4)}`;
-  return `${shortDate(from)} – ${shortDate(to)} ${to.slice(0, 4)}`;
+  // Across two months: short, without the year, so it fits next to the other buttons on a phone.
+  return `${shortDate(from)}–${shortDate(to)}`;
 }
 
 /**
