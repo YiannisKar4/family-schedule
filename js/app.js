@@ -1,12 +1,13 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=9';
-import * as api from './api.js?v=9';
-import { ApiError } from './api.js?v=9';
-import { STORAGE_PREFIX } from './config.js?v=9';
+import * as supa from './supa.js?v=10';
+import * as api from './api.js?v=10';
+import * as live from './live.js?v=10';
+import { ApiError } from './api.js?v=10';
+import { STORAGE_PREFIX } from './config.js?v=10';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=9';
+} from './dates.js?v=10';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -97,7 +98,8 @@ function neededRange() {
 
 /** Loads about three months around what is on screen. */
 async function fetchData({ quiet = false } = {}) {
-  if (state.loading) return;
+  // Asked again while loading (e.g. a live change arrived): load once more afterwards.
+  if (state.loading) { state.again = true; return; }
   state.loading = true;
   $('#refresh').classList.add('spin');
   const from = monthGrid(addMonths(state.anchor, -1))[0];
@@ -115,6 +117,7 @@ async function fetchData({ quiet = false } = {}) {
   } finally {
     state.loading = false;
     $('#refresh').classList.remove('spin');
+    if (state.again) { state.again = false; fetchData({ quiet: true }); }
   }
 }
 
@@ -128,6 +131,7 @@ function show() {
 function handleAuthError(err) {
   if (!(err instanceof ApiError) || !['login-required', 'no-access'].includes(err.code)) return false;
   if (err.code === 'no-access') supa.signOut();
+  live.stop();
   forgetData();
   document.querySelectorAll('dialog[open]').forEach((d) => d.close());
   render();
@@ -661,6 +665,7 @@ function initSettings() {
       buttons: [{ label: 'Άκυρο', value: '' }, { label: 'Αποσύνδεση', value: 'ok', danger: true }] });
     if (!ok) return;
     $('#settings-dlg').close();
+    live.stop();
     await supa.signOut();
     forgetData();
     render();
@@ -736,6 +741,7 @@ function renderLogin() {
       await supa.verifyCode($('#l-sent-to').textContent, code);
       render();
       await fetchData();
+      startLive();
     } catch (e) {
       fail(err, e.message);
       busy(btn, false, 'Σύνδεση');
@@ -880,7 +886,15 @@ function init() {
   setInterval(() => { if (state.view === 'week' && state.data && !document.querySelector('dialog[open]')) render(); }, 5 * 60000);
 
   render();
-  if (supa.signedIn()) fetchData({ quiet: !!state.data });
+  if (supa.signedIn()) {
+    fetchData({ quiet: !!state.data });
+    startLive();
+  }
+}
+
+/** Loads again whenever someone (e.g. on another phone) changes something. */
+function startLive() {
+  live.start(() => { if (supa.signedIn()) fetchData({ quiet: true }); });
 }
 
 init();

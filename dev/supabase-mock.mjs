@@ -1,6 +1,7 @@
 // A stand-in for a Supabase project, for trying the site locally.
 // It runs supabase/schema.sql on an in-process PostgreSQL (PGlite) and imitates the parts of
-// Supabase the site uses: email sign-in (code or magic link), token refresh, and /rest/v1/rpc.
+// Supabase the site uses: email sign-in (code or magic link), token refresh, /rest/v1/rpc, and
+// Realtime (a websocket that announces changes after any api_* call other than api_sched_read).
 //
 //   node dev/supabase-mock.mjs [data.sql]
 //   open http://localhost:8090 and sign in as a@example.com (or an email from data.sql)
@@ -143,12 +144,80 @@ async function callRpc(fn, args, claims) {
       return tx.query(`select ${fn}(${list.join(', ')}) as r`, values);
     });
     rpcCalls++;
+    if (fn !== 'api_sched_read') announce(fn);
     return { status: 200, body: r.rows[0].r };
   } catch (e) {
     if (e.http) return { status: e.http, body: { message: e.message } };
     const status = e.code === '42501' ? (claims ? 403 : 401) : 400;
     return { status, body: { code: e.code, message: e.message, details: null, hint: null } };
   }
+}
+
+// --------------------------------------------------------------- realtime
+// Just enough of a websocket server and of Supabase Realtime's channel protocol for the site.
+
+const sockets = new Set(); // joined sockets
+let liveMessages = 0;
+
+function frame(text) {
+  const data = Buffer.from(text);
+  const head = data.length < 126 ? Buffer.from([0x81, data.length])
+    : data.length < 65536 ? Buffer.from([0x81, 126, data.length >> 8, data.length & 255])
+      : Buffer.concat([Buffer.from([0x81, 127, 0, 0, 0, 0]), Buffer.from([data.length >>> 24, (data.length >> 16) & 255, (data.length >> 8) & 255, data.length & 255])]);
+  return Buffer.concat([head, data]);
+}
+
+function wsSend(sock, msg) {
+  if (!sock.destroyed) sock.write(frame(JSON.stringify(msg)));
+}
+
+function announce(fn) {
+  for (const s of sockets) {
+    liveMessages++;
+    wsSend(s, { topic: s.topic, event: 'postgres_changes', ref: null,
+      payload: { ids: [1], data: { type: 'UPDATE', schema: 'public', table: fn, commit_timestamp: new Date().toISOString() } } });
+  }
+}
+
+function upgrade(req, sock) {
+  const url = new URL(req.url, API);
+  if (url.pathname !== '/realtime/v1/websocket' || url.searchParams.get('apikey') !== ANON_KEY) { sock.destroy(); return; }
+  const accept = crypto.createHash('sha1').update(`${req.headers['sec-websocket-key']}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`).digest('base64');
+  sock.write(`HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`);
+  let buf = Buffer.alloc(0);
+  sock.on('data', (chunk) => {
+    buf = Buffer.concat([buf, chunk]);
+    while (buf.length >= 2) {
+      const op = buf[0] & 15;
+      let len = buf[1] & 127;
+      let at = 2;
+      if (len === 126) { if (buf.length < 4) return; len = buf.readUInt16BE(2); at = 4; }
+      else if (len === 127) { if (buf.length < 10) return; len = Number(buf.readBigUInt64BE(2)); at = 10; }
+      const masked = buf[1] & 128;
+      if (buf.length < at + (masked ? 4 : 0) + len) return;
+      const mask = masked ? buf.subarray(at, at + 4) : null;
+      at += masked ? 4 : 0;
+      const body = Buffer.from(buf.subarray(at, at + len));
+      if (mask) for (let i = 0; i < body.length; i++) body[i] ^= mask[i % 4];
+      buf = buf.subarray(at + len);
+      if (op === 8) { sockets.delete(sock); sock.end(); return; }
+      if (op !== 1) continue;
+      let msg;
+      try { msg = JSON.parse(body.toString()); } catch { continue; }
+      const reply = (status, response = {}) => wsSend(sock, { topic: msg.topic, event: 'phx_reply', ref: msg.ref, join_ref: msg.join_ref, payload: { status, response } });
+      if (msg.event === 'phx_join') {
+        const c = readJwt(`Bearer ${msg.payload?.access_token}`);
+        if (!c || typeof c !== 'object') { reply('error', { reason: 'invalid token' }); continue; }
+        sock.topic = msg.topic;
+        sockets.add(sock);
+        reply('ok', { postgres_changes: [] });
+      } else if (msg.event === 'heartbeat' || msg.event === 'access_token') {
+        reply('ok');
+      }
+    }
+  });
+  sock.on('close', () => sockets.delete(sock));
+  sock.on('error', () => sockets.delete(sock));
 }
 
 // ----------------------------------------------------------------- servers
@@ -171,7 +240,9 @@ http.createServer(async (req, res) => {
 
   // Test helpers (not part of Supabase).
   if (url.pathname === '/__mail') return reply(200, mail.get(url.searchParams.get('email')) || {});
-  if (url.pathname === '/__stats') return reply(200, { rpcCalls, refreshTokens: refreshTokens.size });
+  if (url.pathname === '/__stats') return reply(200, { rpcCalls, refreshTokens: refreshTokens.size, liveSockets: sockets.size, liveMessages });
+  // Drops every live connection, as when a phone goes to sleep.
+  if (url.pathname === '/__drop' && req.method === 'POST') { for (const s of sockets) s.destroy(); sockets.clear(); return reply(200, { ok: true }); }
   if (url.pathname === '/__reset' && req.method === 'POST') { await seed(); rpcCalls = 0; return reply(200, { ok: true }); }
   // Stops the mock, so tests don't have to kill it.
   if (url.pathname === '/__quit' && req.method === 'POST') { reply(200, { ok: true }); setTimeout(() => process.exit(0), 50); return; }
@@ -237,7 +308,7 @@ http.createServer(async (req, res) => {
     return reply(r.status, r.body);
   }
   reply(404, { message: 'not found' });
-}).listen(API_PORT);
+}).on('upgrade', upgrade).listen(API_PORT);
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json' };
 http.createServer((req, res) => {

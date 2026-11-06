@@ -420,6 +420,22 @@ begin
 end $$;
 
 
+-- Live updates: Supabase Realtime tells open pages when these tables change.
+-- Realtime still applies Row Level Security, so each household hears only about its own rows.
+do $$
+declare t text;
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    foreach t in array array['sched_events', 'sched_skips', 'sched_members', 'sched_categories'] loop
+      if not exists (select 1 from pg_publication_tables
+                     where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
+        execute format('alter publication supabase_realtime add table public.%I', t);
+      end if;
+    end loop;
+  end if;
+end $$;
+
+
 -- Only signed-in users may call the website API; Row Level Security does the rest.
 revoke execute on function api_sched_read(text, text), api_sched_add(jsonb),
   api_sched_update(uuid, jsonb, text, text), api_sched_delete(uuid, text, text),

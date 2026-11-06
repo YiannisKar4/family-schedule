@@ -1,6 +1,6 @@
 // A small Supabase client: email sign-in (code or magic link) and calls to the api_* functions.
 // It uses Supabase's REST endpoints directly, so the site needs no extra library.
-import { SUPABASE_URL, SUPABASE_ANON_KEY, SESSION_KEY } from './config.js?v=9';
+import { SUPABASE_URL, SUPABASE_ANON_KEY, SESSION_KEY } from './config.js?v=10';
 
 
 export class AuthError extends Error {}
@@ -131,6 +131,9 @@ async function token() {
   if (session.expires_at - 60 < Date.now() / 1000) await refresh();
   return session.access_token;
 }
+
+/** The current login token, renewed first when it is about to expire (for Realtime). */
+export const accessToken = token;
 
 /** Calls one of the api_* database functions. Retries once after refreshing an expired login. */
 export async function rpc(fn, args = {}, retried = false) {

@@ -20,6 +20,9 @@ await db.exec(`
   alter default privileges in schema public revoke execute on functions from public;
 `);
 
+// As in Supabase, where Realtime reads this publication.
+await db.exec('create publication supabase_realtime');
+
 const budget = process.argv[2];
 if (budget) await db.exec(fs.readFileSync(budget, 'utf8'));
 await db.exec(fs.readFileSync(`${root}supabase/schema.sql`, 'utf8'));
@@ -198,6 +201,10 @@ await rejects(rpc('stranger@example.com', 'api_sched_read', ['2026-11-01', '2026
 await rejects(rpc(null, 'api_sched_read', ['2026-11-01', '2026-11-30']), /permission denied/, 'anon');
 await rejects(as(A, 'select * from sched_events where household_id <> $1', [H]).then((r) => { if (r.rows.length) throw new Error('leak'); throw new Error('permission denied (none visible)'); }), /permission denied/, 'rls');
 ok('security: household only, strangers and visitors get nothing');
+
+const pub = (await db.query(`select tablename from pg_publication_tables where pubname = 'supabase_realtime' order by 1`)).rows.map((r) => r.tablename);
+assert.deepEqual(pub, ['sched_categories', 'sched_events', 'sched_members', 'sched_skips']);
+ok('live updates: the schedule tables are in the Realtime publication');
 
 if (budget) {
   const r = await rpc(A, 'api_read');
