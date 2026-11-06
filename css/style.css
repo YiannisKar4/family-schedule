@@ -476,18 +476,12 @@ textarea.field { resize: vertical; min-height: 44px; }
 .manage-row:first-child { border-top: 0; }
 .manage-row .field { padding: 8px 10px; }
 .manage-row.with-photo { grid-template-columns: auto auto minmax(0, 1fr) auto auto; }
-.mini-ph { position: relative; display: inline-block; }
 .mini-av {
   width: 44px; height: 44px; border-radius: 50%; overflow: hidden; padding: 0; cursor: pointer; display: grid; place-items: center;
   border: 2px solid var(--c); background: color-mix(in srgb, var(--c) 18%, var(--surface-2));
 }
 .mini-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .mini-av .initial { font-weight: 700; color: var(--c); }
-.mini-x {
-  position: absolute; top: -4px; right: -4px; width: 20px; height: 20px; border-radius: 50%; padding: 4px; cursor: pointer;
-  border: 2px solid var(--surface-2); background: var(--text-secondary); color: var(--surface-2); display: grid; place-items: center;
-}
-.mini-x svg { width: 100%; height: 100%; }
 .manage-row.hidden-cat .field { color: var(--text-muted); text-decoration: line-through; }
 .manage-row .icon-btn:disabled { opacity: 0.3; cursor: default; }
 .swatch { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--surface-2); box-shadow: 0 0 0 1px var(--border); cursor: pointer; }

@@ -1,12 +1,12 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=2';
-import * as api from './api.js?v=2';
-import { ApiError } from './api.js?v=2';
-import { STORAGE_PREFIX } from './config.js?v=2';
+import * as supa from './supa.js?v=3';
+import * as api from './api.js?v=3';
+import { ApiError } from './api.js?v=3';
+import { STORAGE_PREFIX } from './config.js?v=3';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=2';
+} from './dates.js?v=3';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -487,9 +487,8 @@ function renderSettings() {
   $('#settings-email').textContent = supa.userEmail();
   const row = (kind, x, i, list) => `
     <div class="manage-row${x.hidden ? ' hidden-cat' : ''}${kind === 'members' ? ' with-photo' : ''}" data-kind="${kind}" data-id="${x.id}">
-      ${kind === 'members' ? `<span class="mini-ph" style="--c:${x.color}">
-        <button type="button" class="mini-av" data-act="photo" aria-label="${x.photo ? 'Άλλαξε φωτογραφία' : 'Βάλε φωτογραφία'}">${avatar(x)}</button>
-        ${x.photo ? '<button type="button" class="mini-x" data-act="nophoto" aria-label="Αφαίρεση φωτογραφίας"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>' : ''}</span>` : ''}
+      ${kind === 'members' ? `<button type="button" class="mini-av" data-act="photo" style="--c:${x.color}"
+        aria-label="${x.photo ? 'Φωτογραφία: αλλαγή ή αφαίρεση' : 'Βάλε φωτογραφία'}">${avatar(x)}</button>` : ''}
       <button type="button" class="swatch" data-act="color" style="background:${x.color}" aria-label="Χρώμα"></button>
       <input class="field" value="${esc(x.name)}" data-act="name" aria-label="Όνομα">
       <button type="button" class="icon-btn" data-act="hide" title="${x.hidden ? 'Εμφάνιση' : 'Απόκρυψη'}" aria-label="${x.hidden ? 'Εμφάνιση' : 'Απόκρυψη'}">${x.hidden
@@ -566,12 +565,21 @@ function initSettings() {
     const items = list(kind);
     const x = items.find((i) => i.id === Number(row.dataset.id));
     if (b.dataset.act === 'photo') {
-      // Opened here, inside the tap, so phones and tablets allow the picker.
-      $('#photo-input').dataset.id = x.id;
-      $('#photo-input').value = '';
-      $('#photo-input').click();
-    } else if (b.dataset.act === 'nophoto') {
-      settingsCall(() => api.memberPhoto(x.id, null), 'Η φωτογραφία αφαιρέθηκε');
+      // The picker must open inside a tap, or phones and tablets block it.
+      const pick = () => {
+        $('#photo-input').dataset.id = x.id;
+        $('#photo-input').value = '';
+        $('#photo-input').click();
+      };
+      if (!x.photo) return pick();
+      const onTap = (ev) => { if (ev.target.closest('button')?.value === 'change') pick(); };
+      $('#ask-actions').addEventListener('click', onTap);
+      ask({ title: `Φωτογραφία: ${x.name}`, buttons: [
+        { label: 'Άκυρο', value: '' }, { label: 'Αφαίρεση', value: 'remove' }, { label: 'Αλλαγή', value: 'change', primary: true }] })
+        .then((v) => {
+          $('#ask-actions').removeEventListener('click', onTap);
+          if (v === 'remove') settingsCall(() => api.memberPhoto(x.id, null), 'Η φωτογραφία αφαιρέθηκε');
+        });
     } else if (b.dataset.act === 'color') {
       const next = PALETTE[(PALETTE.indexOf(x.color) + 1) % PALETTE.length];
       settingsCall(() => save(kind, { ...x, color: next }));
