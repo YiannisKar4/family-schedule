@@ -417,16 +417,25 @@ main { padding-top: 12px; }
 .now { position: absolute; left: 0; right: 0; height: 2px; background: var(--critical); z-index: 3; pointer-events: none; }
 .now::before { content: ""; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--critical); }
 .ev {
-  position: absolute; z-index: 2; display: flex; flex-direction: column; align-items: flex-start; gap: 0; overflow: hidden;
-  border: 0; border-left: 3px solid var(--c); border-radius: 6px; padding: 2px 4px; cursor: pointer; text-align: left;
-  background: color-mix(in srgb, var(--c) 20%, var(--surface-2)); color: var(--text-primary); font-size: 12px; line-height: 1.25;
+  position: absolute; z-index: 2; display: flex; flex-direction: column; align-items: stretch; gap: 0; overflow: hidden;
+  border: 0; border-left: 3px solid var(--c); border-radius: 6px; padding: 1px 4px 0; cursor: pointer; text-align: left;
+  background: color-mix(in srgb, var(--c) 20%, var(--surface-2)); color: var(--text-primary); font-size: 12px; line-height: 13px;
 }
 .ev:hover { background: color-mix(in srgb, var(--c) 30%, var(--surface-2)); }
-.ev-t { font-weight: 600; max-width: 100%; hyphens: auto; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.ev.short .ev-t { -webkit-line-clamp: 1; white-space: nowrap; text-overflow: ellipsis; display: block; max-width: 100%; }
-.ev-s { font-size: 11px; color: var(--text-secondary); font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
-.ev-row { display: flex; align-items: center; gap: 4px; max-width: 100%; min-width: 0; }
-.ev-row .ev-t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; min-width: 0; }
+/* The title takes the lines that fit (--tl, set from the length), and never shrinks away. */
+.ev-t {
+  flex: none; font-weight: 600; max-width: 100%; hyphens: auto; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-line-clamp: var(--tl, 2); -webkit-box-orient: vertical; overflow: hidden;
+}
+/* Time first, then who; what does not fit in --rl rows of 15px is left out whole, never cut in half. */
+.ev-s {
+  flex: none; font-size: 11px; line-height: 15px; color: var(--text-secondary); font-variant-numeric: tabular-nums;
+  display: flex; align-items: center; column-gap: 4px; flex-wrap: wrap; max-height: calc(var(--rl, 1) * 15px); overflow: hidden;
+}
+.ev-s .faces.sm { margin: 0; height: 15px; align-items: center; }
+.ev-row { display: flex; align-items: center; gap: 4px; max-width: 100%; min-width: 0; height: 15px; }
+.ev-row .ev-s { flex: none; max-height: none; }
+.ev-row .ev-t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; min-width: 0; flex: 1 1 auto; }
 
 /* Who is on an activity: overlapping circles with a photo or the initial. */
 .faces { display: inline-flex; flex: none; margin-top: 3px; max-width: 100%; }
@@ -444,8 +453,8 @@ main { padding-top: 12px; }
   .wk-head, .wk-allday, .wk-grid { grid-template-columns: 30px repeat(7, minmax(0, 1fr)); }
   .gutter { font-size: 10px; padding-right: 3px; }
   .hr { right: 3px; }
-  .ev { font-size: 11px; padding: 1px 2px 1px 3px; border-left-width: 2px; border-radius: 4px; }
-  .ev-s { font-size: 10px; }
+  .ev { font-size: 11px; padding: 1px 2px 0 3px; border-left-width: 2px; border-radius: 4px; }
+  .ev-s { font-size: 10px; column-gap: 2px; }
   .faces i { width: 16px; height: 16px; font-size: 9px; }
   .faces i + i { margin-left: -6px; }
   .wk-day .dn { width: 28px; height: 28px; font-size: 16px; }
