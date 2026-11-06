@@ -324,15 +324,20 @@ dialog.ask { width: min(400px, calc(100vw - 32px)); border-radius: 18px; border:
 .btn.primary.danger-fill { background: var(--critical); color: #fff; }
 
 /* ======================================================= schedule ======= */
-.range-nav { display: flex; align-items: center; gap: 2px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 2px; }
-.range-label { font-weight: 600; font-size: 15px; min-width: 150px; text-align: center; white-space: nowrap; }
-.today-btn { padding: 7px 12px; border-radius: 999px; font-size: 14px; }
-@media (max-width: 520px) {
-  .range-nav { margin-right: auto; }
+/* The week and «Σήμερα» are pills of the same height (--pill-h). */
+.topbar { --pill-h: 36px; }
+.range-nav { display: flex; align-items: center; gap: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 0 1px; height: var(--pill-h); box-sizing: border-box; }
+.range-nav .icon-btn { width: 30px; height: calc(var(--pill-h) - 4px); }
+.range-label { font-weight: 600; font-size: 15px; min-width: 112px; padding: 0 2px; text-align: center; white-space: nowrap; }
+.today-btn { height: var(--pill-h); box-sizing: border-box; padding: 0 12px; border-radius: 999px; font-size: 14px; }
+@media (max-width: 520px), (max-height: 500px) and (orientation: landscape) {
+  .topbar { --pill-h: 34px; }
   .range-label { min-width: 0; font-size: 14px; }
-  .range-nav .icon-btn { width: 32px; height: 32px; }
-  .today-btn { padding: 6px 10px; font-size: 13px; }
+  .range-nav .icon-btn { width: 28px; }
+  .today-btn { padding: 0 10px; font-size: 13px; }
 }
+@media (max-width: 520px) { .range-nav { margin-right: auto; } }
+@media (max-width: 359px) { .range-label { font-size: 13px; } .today-btn { padding: 0 8px; } }
 
 /* Who is shown: one circle per person. Tap one to see only theirs. */
 .people {
