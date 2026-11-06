@@ -203,7 +203,7 @@ h2 { font-size: 16px; margin: 0; }
   background: var(--surface-2); outline: none;
 }
 .field:focus, .filters input:focus, .filters select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.form-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 12px; }
 /* ---------- buttons ---------- */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
@@ -493,7 +493,9 @@ main { padding-top: 12px; }
   border: 1px solid var(--border); background: var(--surface-2); font-size: 14px;
 }
 .pick[aria-pressed="true"] { border-color: var(--c); background: color-mix(in srgb, var(--c) 16%, var(--surface-2)); font-weight: 600; box-shadow: inset 0 0 0 1px var(--c); }
-.time-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.time-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+/* Date and time fields have a wide built-in minimum; let them shrink to their column. */
+.form-grid .field, .time-pair .field { width: 100%; min-width: 0; }
 .day-picks { display: flex; gap: 6px; margin-top: 10px; }
 .day-picks button {
   flex: 1; height: 40px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); cursor: pointer; font-weight: 600;
