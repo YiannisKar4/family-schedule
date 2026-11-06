@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run test:db)",
+      "Bash(npm run test:expand)",
+      "Bash(npm install)",
+      "Bash(node dev/supabase-mock.mjs:*)",
+      "Bash(node --check:*)",
+      "Bash(bash dev/ui-tests.sh:*)",
+      "Bash(curl -s -X POST localhost:8091/__quit)",
+      "Bash(git push origin main)",
+      "Bash(git push -q origin main)"
+    ]
+  }
+}

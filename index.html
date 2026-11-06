@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#2a78d6">
+  <title>Οικογενειακό πρόγραμμα</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232a78d6'/%3E%3Crect x='7' y='9' width='18' height='15' rx='2.5' fill='none' stroke='white' stroke-width='2.4'/%3E%3Cpath d='M7 14h18M12 6v5M20 6v5' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css?v=1">
+  <script type="module" src="js/app.js?v=1"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">Πρόγραμμα</div>
+      <div class="range-nav" id="range-nav" hidden>
+        <button class="icon-btn" id="prev" aria-label="Προηγούμενο"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg></button>
+        <span class="range-label" id="range-label"></span>
+        <button class="icon-btn" id="next" aria-label="Επόμενο"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg></button>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn today-btn" id="today" hidden>Σήμερα</button>
+      <button class="icon-btn" id="refresh" aria-label="Ανανέωση" title="Ανανέωση"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><path d="M21 3v5h-5"/></svg></button>
+      <button class="icon-btn" id="open-settings" aria-label="Ρυθμίσεις" title="Ρυθμίσεις" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+    </div>
+  </header>
+
+  <div class="tabs-wrap" id="tabs-wrap" hidden>
+    <nav class="tabs" role="tablist">
+      <button class="tab" role="tab" data-view="week"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M9 9v12M15 9v12"/></svg>Εβδομάδα</button>
+      <button class="tab" role="tab" data-view="month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M7 13h.01M12 13h.01M17 13h.01M7 17h.01M12 17h.01M17 17h.01"/></svg>Μήνας</button>
+    </nav>
+    <div class="who-filter" id="who-filter" role="group" aria-label="Ποιος"></div>
+  </div>
+
+  <main id="main"></main>
+
+  <button class="fab" id="fab" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Νέο</button>
+
+  <!-- Add / edit an activity -->
+  <dialog id="event-dlg">
+    <form class="dlg" id="event-form" method="dialog" novalidate>
+      <div class="dlg-head">
+        <h2 id="event-title">Νέα δραστηριότητα</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Κλείσιμο"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <p class="series-note small muted" id="series-note" hidden></p>
+      <label class="lbl" for="f-title">Τι</label>
+      <input class="field title-input" id="f-title" autocomplete="off" list="title-suggestions" placeholder="π.χ. Ποδόσφαιρο" required>
+      <datalist id="title-suggestions"></datalist>
+      <label class="lbl">Κατηγορία</label>
+      <div class="chip-row" id="f-category"></div>
+      <label class="lbl">Ποιος</label>
+      <div class="chip-row" id="f-members"></div>
+      <div class="form-grid">
+        <div>
+          <label class="lbl" for="f-date">Ημερομηνία</label>
+          <input class="field" id="f-date" type="date" required>
+        </div>
+        <div class="time-pair" id="time-pair">
+          <div>
+            <label class="lbl" for="f-start">Από</label>
+            <input class="field" id="f-start" type="time" step="300">
+          </div>
+          <div>
+            <label class="lbl" for="f-end">Έως</label>
+            <input class="field" id="f-end" type="time" step="300">
+          </div>
+        </div>
+        <div id="end-date-box" hidden>
+          <label class="lbl" for="f-end-date">Μέχρι και</label>
+          <input class="field" id="f-end-date" type="date">
+        </div>
+      </div>
+      <label class="check"><input type="checkbox" id="f-allday"> Όλη μέρα</label>
+      <label class="lbl">Επανάληψη</label>
+      <div class="seg" id="f-repeat">
+        <button type="button" data-v="0" aria-pressed="true">Όχι</button>
+        <button type="button" data-v="1" aria-pressed="false">Κάθε εβδομάδα</button>
+        <button type="button" data-v="2" aria-pressed="false">Κάθε 2 εβδομάδες</button>
+      </div>
+      <div id="repeat-box" hidden>
+        <div class="day-picks" id="f-days" role="group" aria-label="Μέρες"></div>
+        <label class="lbl" for="f-until">Μέχρι (κενό: χωρίς τέλος)</label>
+        <input class="field" id="f-until" type="date">
+      </div>
+      <label class="lbl" for="f-location">Πού</label>
+      <input class="field" id="f-location" autocomplete="off" placeholder="π.χ. Γήπεδο Αμαρουσίου">
+      <label class="lbl" for="f-notes">Σημειώσεις</label>
+      <textarea class="field" id="f-notes" rows="2"></textarea>
+      <div class="err" id="event-err" hidden></div>
+      <div class="row-actions">
+        <button type="button" class="btn danger" id="event-delete" hidden>Διαγραφή</button>
+        <span class="spacer"></span>
+        <button type="submit" class="btn primary" id="event-save">Αποθήκευση</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- One day (from the month view) -->
+  <dialog id="day-dlg">
+    <div class="dlg">
+      <div class="dlg-head">
+        <h2 id="day-title"></h2>
+        <button type="button" class="icon-btn" data-close aria-label="Κλείσιμο"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div id="day-list" class="agenda"></div>
+      <div class="row-actions">
+        <button type="button" class="btn" id="day-week">Δες την εβδομάδα</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn primary" id="day-add">Προσθήκη</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Settings: people and categories -->
+  <dialog id="settings-dlg">
+    <div class="dlg" id="settings-body">
+      <div class="dlg-head">
+        <h2>Ρυθμίσεις</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Κλείσιμο"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <p class="small muted">Συνδεδεμένος ως <b id="settings-email"></b></p>
+      <h3 class="manage-h">Μέλη οικογένειας</h3>
+      <p class="small muted">Πάτα το χρώμα για να το αλλάξεις. Γράψε πάνω στο όνομα για μετονομασία.</p>
+      <div id="member-list" class="manage-list"></div>
+      <form id="member-add" class="manage-add" novalidate>
+        <input class="field" id="member-new" autocomplete="off" placeholder="Νέο μέλος" aria-label="Όνομα νέου μέλους">
+        <button class="btn primary" type="submit">Προσθήκη</button>
+      </form>
+      <h3 class="manage-h">Κατηγορίες</h3>
+      <div id="cat-list" class="manage-list"></div>
+      <form id="cat-add" class="manage-add" novalidate>
+        <input class="field" id="cat-new" autocomplete="off" placeholder="Νέα κατηγορία" aria-label="Όνομα νέας κατηγορίας">
+        <button class="btn primary" type="submit">Προσθήκη</button>
+      </form>
+      <div class="err" id="settings-err" hidden></div>
+      <div class="row-actions">
+        <button type="button" class="btn danger" id="logout">Αποσύνδεση από αυτή τη συσκευή</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Confirmation and "which dates?" -->
+  <dialog id="ask-dlg" class="ask" aria-labelledby="ask-title">
+    <form method="dialog" class="ask-body">
+      <h2 id="ask-title"></h2>
+      <p id="ask-text"></p>
+      <div class="ask-actions" id="ask-actions"></div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" popover="manual" hidden></div>
+</body>
+</html>
