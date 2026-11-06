@@ -385,11 +385,15 @@ main { padding-top: 12px; }
 .note + .card { margin-top: 12px; }
 
 /* ---------- week ---------- */
-.week { padding: 0; overflow: clip; container-type: inline-size; --gut: 40px; --day: minmax(0, 1fr); }
+.week { padding: 0; overflow: clip; container-type: inline-size; --gut: 40px; --day: calc((100cqw - var(--gut)) / 7); }
 .wk-head, .wk-allday, .wk-grid { display: grid; grid-template-columns: var(--gut) repeat(var(--n, 7), var(--day)); }
 /* The day names stay under the top bar; they follow the days when the week scrolls sideways. */
 .wk-top { position: sticky; top: var(--topbar-h, 57px); z-index: 5; overflow: hidden; background: var(--surface-1); border-bottom: 1px solid var(--axis); }
-.wk-body { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; }
+.wk-body { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; scroll-snap-type: x mandatory; scroll-padding-left: var(--gut); }
+/* The week before and after sit on either side; a swipe glides there and stops at a Monday
+   (on a phone at any day). As wide as all the days, so the hours on the left stay in place. */
+.wk-head, .wk-allday, .wk-grid { width: calc(var(--gut) + var(--n, 7) * var(--day)); }
+.wk-col.mon { scroll-snap-align: start; }
 .wk-body::-webkit-scrollbar { display: none; }
 .wk-head > .gutter, .wk-allday > .gutter, .wk-grid > .gutter { position: sticky; left: 0; z-index: 4; }
 .wk-head > .gutter, .wk-allday > .gutter { background: var(--surface-1); }
@@ -461,10 +465,7 @@ main { padding-top: 12px; }
 @media (max-width: 600px) {
   /* About three and a half days on the screen; swipe for the rest, stopping at a day. */
   .week { --gut: 30px; --day: calc((100cqw - 30px) / 3.5); }
-  .wk-body { scroll-snap-type: x mandatory; scroll-padding-left: 30px; }
   .wk-col { scroll-snap-align: start; }
-  /* As wide as all the days, so the hours on the left can stay in place the whole way. */
-  .wk-head, .wk-allday, .wk-grid { width: calc(30px + var(--n, 7) * var(--day)); }
   .gutter { font-size: 10px; padding-right: 3px; }
   .hr { right: 3px; }
   .ev { font-size: 11px; padding: 1px 2px 0 3px; border-left-width: 2px; border-radius: 4px; }
