@@ -1,7 +1,7 @@
 // Date and time fields of the activity window: a rounded calendar and time wheels that open
 // under the field, in place of the browser's own pickers. The <input>s stay (hidden) and keep
 // their value, so the rest of the code reads and sets .value and hears 'change' as before.
-import { pad, today, addMonths, monthGrid, weekday, monthName, DAY_LETTER, DAY_SHORT, shortDate } from './dates.js?v=36';
+import { pad, today, addMonths, monthGrid, weekday, monthName, DAY_LETTER, DAY_SHORT, shortDate } from './dates.js?v=35';
 
 const reduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const EASE = 'cubic-bezier(.2, .8, .2, 1)';

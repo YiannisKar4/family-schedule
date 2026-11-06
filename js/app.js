@@ -1,15 +1,15 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=36';
-import * as api from './api.js?v=36';
-import * as live from './live.js?v=36';
-import { ApiError } from './api.js?v=36';
-import { STORAGE_PREFIX } from './config.js?v=36';
-import { attachPlaces, attachSuggest } from './places.js?v=36';
-import { attachPicker, closePicker, closeOnOutside } from './pickers.js?v=36';
+import * as supa from './supa.js?v=35';
+import * as api from './api.js?v=35';
+import * as live from './live.js?v=35';
+import { ApiError } from './api.js?v=35';
+import { STORAGE_PREFIX } from './config.js?v=35';
+import { attachPlaces, attachSuggest } from './places.js?v=35';
+import { attachPicker, closePicker, closeOnOutside } from './pickers.js?v=35';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=36';
+} from './dates.js?v=35';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
