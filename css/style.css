@@ -399,11 +399,22 @@ main { padding-top: 12px; }
 .wk-grid { position: relative; }
 .hr { position: absolute; right: 6px; transform: translateY(-50%); font-variant-numeric: tabular-nums; }
 .hr:first-child { transform: none; }
-.wk-col {
-  position: relative; border-left: 1px solid var(--grid); cursor: copy;
-  background-image: repeating-linear-gradient(to bottom, var(--grid) 0 1px, transparent 1px var(--hour));
+/* Every other hour is a band; the weekend is tinted violet; today is framed in the accent colour. */
+.wk-grid {
+  --band-a: color-mix(in srgb, var(--text-primary) 5%, var(--surface-1)); --band-b: var(--surface-1);
 }
-.wk-col.today { background-color: color-mix(in srgb, var(--accent) 4%, transparent); }
+.wk-col, .wk-grid > .gutter {
+  background-image: repeating-linear-gradient(to bottom, var(--band-a) 0 var(--hour), var(--band-b) var(--hour) calc(var(--hour) * 2));
+}
+.wk-col { position: relative; border-left: 1px solid color-mix(in srgb, var(--axis) 45%, var(--grid)); cursor: copy; }
+.wk-col.we { --band-a: color-mix(in srgb, var(--series-7) 13%, var(--surface-1)); --band-b: color-mix(in srgb, var(--series-7) 6%, var(--surface-1)); }
+.wk-col.today {
+  --band-a: color-mix(in srgb, var(--accent) 15%, var(--surface-1)); --band-b: color-mix(in srgb, var(--accent) 8%, var(--surface-1));
+  box-shadow: inset 2px 0 0 var(--accent), inset -2px 0 0 var(--accent);
+}
+.ad-cell.we { background: color-mix(in srgb, var(--series-7) 6%, var(--surface-1)); }
+.wk-day.we:not(.today) .wd { color: var(--series-7); font-weight: 600; }
+.wk-day.today { box-shadow: inset 0 -3px 0 var(--accent); }
 .now { position: absolute; left: 0; right: 0; height: 2px; background: var(--critical); z-index: 3; pointer-events: none; }
 .now::before { content: ""; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--critical); }
 .ev {
