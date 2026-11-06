@@ -1,14 +1,14 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=23';
-import * as api from './api.js?v=23';
-import * as live from './live.js?v=23';
-import { ApiError } from './api.js?v=23';
-import { STORAGE_PREFIX } from './config.js?v=23';
-import { attachPlaces } from './places.js?v=23';
+import * as supa from './supa.js?v=24';
+import * as api from './api.js?v=24';
+import * as live from './live.js?v=24';
+import { ApiError } from './api.js?v=24';
+import { STORAGE_PREFIX } from './config.js?v=24';
+import { attachPlaces } from './places.js?v=24';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=23';
+} from './dates.js?v=24';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -217,7 +217,7 @@ function renderPeople() {
   box.hidden = !members.length;
   box.classList.toggle('picking', state.filter.length > 0);
   box.innerHTML = members.map((m) => { const on = state.filter.includes(m.id); return `<button type="button" class="person${on ? ' on' : ''}" data-id="${m.id}"
-      style="--c:${m.color}" aria-pressed="${on}"><span class="ph">${avatar(m)}</span><span class="nm">${esc(m.name)}</span></button>`; }).join('');
+      style="--c:${m.color}" aria-pressed="${on}" aria-label="${esc(m.name)}" title="${esc(m.name)}"><span class="ph">${avatar(m)}</span><span class="nm">${esc(m.name)}</span></button>`; }).join('');
 }
 
 /**
@@ -1068,6 +1068,17 @@ function init() {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && supa.signedIn() && Date.now() - state.lastFetch > 60000) fetchData({ quiet: true });
   });
+  // On a wide or sideways screen the circles sit in the top bar, between the week and «Σήμερα»,
+  // so they stay in sight when the calendar scrolls.
+  const peopleInBar = matchMedia('(orientation: landscape), (min-width: 700px)');
+  const placePeople = () => {
+    const box = $('#people');
+    if (peopleInBar.matches) $('#range-nav').after(box);
+    else $('#tabs-wrap').after(box);
+    box.classList.toggle('in-bar', peopleInBar.matches);
+  };
+  placePeople();
+  peopleInBar.addEventListener('change', placePeople);
   // The day names stick just under the top bar, whatever its height.
   const bar = $('.topbar');
   new ResizeObserver(() => document.documentElement.style.setProperty('--topbar-h', `${bar.offsetHeight}px`)).observe(bar);
