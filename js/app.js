@@ -1,14 +1,14 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=15';
-import * as api from './api.js?v=15';
-import * as live from './live.js?v=15';
-import { ApiError } from './api.js?v=15';
-import { STORAGE_PREFIX } from './config.js?v=15';
-import { attachPlaces } from './places.js?v=15';
+import * as supa from './supa.js?v=16';
+import * as api from './api.js?v=16';
+import * as live from './live.js?v=16';
+import { ApiError } from './api.js?v=16';
+import { STORAGE_PREFIX } from './config.js?v=16';
+import { attachPlaces } from './places.js?v=16';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=15';
+} from './dates.js?v=16';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -964,4 +964,25 @@ function startLive() {
   live.start(() => { if (supa.signedIn()) fetchData({ quiet: true }); });
 }
 
+/**
+ * Phones: keep open windows inside the part of the screen that is visible.
+ * On iPhone the keyboard and the date/time wheel cover the page without shrinking it,
+ * so a window anchored to the bottom would hide its Save button behind them.
+ */
+function trackVisibleArea() {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  const root = document.documentElement.style;
+  const update = () => {
+    if (vv.scale > 1.05) { root.removeProperty('--vv-h'); root.removeProperty('--vv-below'); return; }
+    const below = Math.max(0, document.documentElement.clientHeight - vv.height - vv.offsetTop);
+    root.setProperty('--vv-h', `${Math.round(vv.height)}px`);
+    root.setProperty('--vv-below', `${Math.round(below)}px`);
+  };
+  vv.addEventListener('resize', update);
+  vv.addEventListener('scroll', update);
+  update();
+}
+
+trackVisibleArea();
 init();

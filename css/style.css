@@ -231,11 +231,14 @@ h2 { font-size: 16px; margin: 0; }
 dialog {
   border: 0; padding: 0; border-radius: 18px; width: min(520px, calc(100vw - 24px));
   background: var(--surface-1); color: var(--text-primary); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  max-height: calc(100dvh - 24px);
+  max-height: calc(100vh - 24px);
+  max-height: calc(min(100dvh, var(--vv-h, 100dvh)) - 24px);
 }
 dialog::backdrop { background: rgba(0, 0, 0, 0.4); }
 @media (max-width: 560px) {
-  dialog { width: 100vw; max-width: 100vw; margin: auto 0 0; border-radius: 18px 18px 0 0; max-height: 92dvh; }
+  dialog { width: 100vw; max-width: 100vw; margin: auto 0 0; border-radius: 18px 18px 0 0; max-height: 92vh; }
+  /* Sit just above the keyboard or the date/time wheel, and fit in what is left. */
+  dialog { margin-bottom: var(--vv-below, 0px); max-height: min(92dvh, calc(var(--vv-h, 100dvh) - 12px)); }
 }
 .dlg { padding: 18px 16px 16px; }
 .dlg-head { display: flex; align-items: center; margin-bottom: 12px; }
@@ -552,3 +555,8 @@ textarea.field { resize: vertical; min-height: 44px; }
 .manage-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; margin-top: 10px; }
 .manage-add .field { padding: 8px 10px; }
 #settings-body.busy { opacity: 0.6; pointer-events: none; }
+
+/* iPhone zooms the page into any field under 16px when tapped, which cuts the window off. */
+@media (pointer: coarse) {
+  .field:not(.title-input):not(.amount-input) { font-size: 16px; }
+}
