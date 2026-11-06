@@ -1,6 +1,6 @@
 {
-  "name": "Οικογενειακό Πρόγραμμα",
-  "short_name": "Πρόγραμμα",
+  "name": "Family Schedule",
+  "short_name": "Family Schedule",
   "lang": "el",
   "id": "./",
   "start_url": "./#week",
