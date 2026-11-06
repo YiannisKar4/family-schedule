@@ -344,15 +344,15 @@ dialog.ask { width: min(400px, calc(100vw - 32px)); border-radius: 18px; border:
   -webkit-tap-highlight-color: transparent; transition: opacity 0.15s, transform 0.15s;
 }
 .person .ph {
-  width: clamp(64px, 17vw, 150px); aspect-ratio: 1; border-radius: 50%; overflow: hidden;
+  width: clamp(38px, 10.2vw, 90px); aspect-ratio: 1; border-radius: 50%; overflow: hidden;
   display: grid; place-items: center; background: color-mix(in srgb, var(--c) 18%, var(--surface-2));
-  border: clamp(3px, 0.6vw, 5px) solid var(--c); box-shadow: var(--shadow);
+  border: clamp(2px, 0.36vw, 3px) solid var(--c); box-shadow: var(--shadow);
 }
 .person .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.person .initial { font-size: clamp(26px, 7vw, 60px); font-weight: 700; color: var(--c); }
+.person .initial { font-size: clamp(16px, 4.2vw, 36px); font-weight: 700; color: var(--c); }
 .person .nm { font-size: clamp(13px, 2vw, 17px); font-weight: 600; }
 .person:active { transform: scale(0.96); }
-.person.on .ph { box-shadow: 0 0 0 clamp(3px, 0.6vw, 5px) var(--surface-1), 0 0 0 clamp(6px, 1.2vw, 10px) var(--c); }
+.person.on .ph { box-shadow: 0 0 0 clamp(2px, 0.36vw, 3px) var(--surface-1), 0 0 0 clamp(4px, 0.72vw, 6px) var(--c); }
 .person.on .nm { color: var(--text-primary); }
 .people.picking .person:not(.on) { opacity: 0.4; filter: grayscale(0.6); }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; vertical-align: middle; }
