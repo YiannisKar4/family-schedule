@@ -1,14 +1,14 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=14';
-import * as api from './api.js?v=14';
-import * as live from './live.js?v=14';
-import { ApiError } from './api.js?v=14';
-import { STORAGE_PREFIX } from './config.js?v=14';
-import { attachPlaces } from './places.js?v=14';
+import * as supa from './supa.js?v=15';
+import * as api from './api.js?v=15';
+import * as live from './live.js?v=15';
+import { ApiError } from './api.js?v=15';
+import { STORAGE_PREFIX } from './config.js?v=15';
+import { attachPlaces } from './places.js?v=15';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=14';
+} from './dates.js?v=15';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -252,10 +252,10 @@ function renderWeek() {
   }
   const hours = endH - startH;
 
-  const head = days.map((d, i) => `<button type="button" class="wk-day${d === t ? ' today' : ''}" data-day="${d}">
+  const head = days.map((d, i) => `<button type="button" class="wk-day${i > 4 ? ' we' : ''}${d === t ? ' today' : ''}" data-day="${d}">
       <span class="wd">${DAY_SHORT[i]}</span><span class="dn">${Number(d.slice(8))}</span></button>`).join('');
   const allDayRow = allDay.some((l) => l.length) ? `<div class="wk-allday"><div class="gutter small muted">όλη<br>μέρα</div>${allDay.map((list, i) =>
-    `<div class="ad-cell">${list.map((o) => chip(o, days[i])).join('')}</div>`).join('')}</div>` : '';
+    `<div class="ad-cell${i > 4 ? ' we' : ''}">${list.map((o) => chip(o, days[i])).join('')}</div>`).join('')}</div>` : '';
   const gutter = Array.from({ length: hours }, (_, i) => `<div class="hr" style="top:${i * HOUR_PX}px">${pad(startH + i)}:00</div>`).join('');
   const cols = timed.map((list, i) => {
     const d = days[i];
@@ -275,7 +275,7 @@ function renderWeek() {
       const m = n.getHours() * 60 + n.getMinutes() - startH * 60;
       if (m >= 0 && m <= hours * 60) now = `<div class="now" style="top:${(m / 60) * HOUR_PX}px"></div>`;
     }
-    return `<div class="wk-col${d === t ? ' today' : ''}" data-day="${d}">${blocks}${now}</div>`;
+    return `<div class="wk-col${i > 4 ? ' we' : ''}${d === t ? ' today' : ''}" data-day="${d}">${blocks}${now}</div>`;
   }).join('');
 
   const empty = !occ.length ? `<p class="empty small">Τίποτα αυτή την εβδομάδα. Πάτα σε μια ώρα ή στο «Νέο» για να προσθέσεις.</p>` : '';
