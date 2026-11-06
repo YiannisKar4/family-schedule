@@ -12,6 +12,8 @@ Live at **https://yianniskar4.github.io/family-schedule/**
 - **Ποιος** (big circles above the calendar, one per person, with their photo or initial):
   tap one or more to make their activities stand out; the others fade but stay on screen.
   Tap a circle again to let it go. Activities with nobody set (family things) never fade.
+- Every activity shows who is on it: small circles with each person's photo, or their initial on
+  their colour. They stay in colour even when the activity is faded.
 - **+ Νέο**: add in a few taps. Typing a title used before (e.g. "Ποδόσφαιρο") fills in its usual
   category, people, time and place.
 - **Επανάληψη**: every week or every two weeks, on the days you pick, until a date or with no end.
