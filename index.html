@@ -94,9 +94,11 @@
       </div>
       <label class="lbl" for="f-notes">Σημειώσεις</label>
       <textarea class="field" id="f-notes" rows="2"></textarea>
+      <label class="check" id="cancel-box" hidden><input type="checkbox" id="f-cancelled"> Ακυρώθηκε <span class="small muted">(μένει στο ημερολόγιο, διαγραμμένο)</span></label>
       <div class="err" id="event-err" hidden></div>
       <div class="row-actions">
         <button type="button" class="btn danger" id="event-delete" hidden>Διαγραφή</button>
+        <button type="button" class="btn" id="event-copy" hidden>Αντιγραφή</button>
         <span class="spacer"></span>
         <button type="submit" class="btn primary" id="event-save">Αποθήκευση</button>
       </div>

@@ -162,6 +162,16 @@ assert.equal(byId(fb2).title, 'Ποδόσφαιρο U10');
 assert.deepEqual(byId(fb2).repeatDays, [2]);
 ok('edit all of a series');
 
+// Cancelled: one date of a series, then back again
+const off1 = (await rpc(A, 'api_sched_update', [fb, { title: 'Ποδόσφαιρο', category: football, date: '2026-11-19', start: '17:00', end: '18:30', cancelled: true }, 'one', '2026-11-19'])).id;
+d = await read();
+assert.equal(byId(off1).cancelled, true);
+assert.equal(byId(fb).cancelled, false);
+await rpc(A, 'api_sched_update', [off1, { title: 'Ποδόσφαιρο', category: football, date: '2026-11-19', start: '17:00', end: '18:30', cancelled: false }]);
+d = await read();
+assert.equal(byId(off1).cancelled, false);
+ok('cancelled: one date of a series, and undone');
+
 // Delete following from 24 Nov removes the edited single dates after it as well
 const child2 = (await rpc(A, 'api_sched_update', [fb, { title: 'Ποδόσφαιρο', date: '2026-11-26', start: '19:00', end: '20:00' }, 'one', '2026-11-26'])).id;
 await rpc(A, 'api_sched_delete', [fb, 'following', '2026-11-24']);

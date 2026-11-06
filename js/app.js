@@ -161,6 +161,7 @@ function picked(ev) {
   return ev.members.some((id) => state.filter.includes(id));
 }
 const fade = (ev) => (picked(ev) ? '' : ' faded');
+const off = (ev) => (ev.cancelled ? ' cancelled' : '');
 
 function occurrences(from, to) {
   return expand(state.data.events, from, to);
@@ -263,7 +264,7 @@ function renderWeek() {
       const h = Math.max(((minutes(o.end) - minutes(o.start)) / 60) * HOUR_PX, 22);
       const w = 100 / o.lanes;
       const short = h < 36;
-      return `<button type="button" class="ev${short ? ' short' : ''}${fade(o.event)}" data-id="${o.event.id}" data-date="${d}"
+      return `<button type="button" class="ev${short ? ' short' : ''}${fade(o.event)}${off(o.event)}" data-id="${o.event.id}" data-date="${d}"
         style="top:${top}px;height:${h - 2}px;left:calc(${o.lane * w}% + 1px);width:calc(${w}% - 2px);--c:${colorOf(o.event)}">
         ${short ? `<span class="ev-row">${faces(o.event, true)}<span class="ev-t">${esc(o.event.title)}</span></span>`
     : `<span class="ev-t">${esc(o.event.title)}</span><span class="ev-s">${o.start}</span>${faces(o.event)}`}</button>`;
@@ -290,7 +291,7 @@ function renderWeek() {
 
 function chip(o, day) {
   const cont = o.date < day ? ' cont' : '';
-  return `<button type="button" class="chip${cont}${fade(o.event)}" data-id="${o.event.id}" data-date="${o.date}" style="--c:${colorOf(o.event)}">${faces(o.event, true)}${o.allDay ? '' : `<b>${o.start}</b> `}${esc(o.event.title)}</button>`;
+  return `<button type="button" class="chip${cont}${fade(o.event)}${off(o.event)}" data-id="${o.event.id}" data-date="${o.date}" style="--c:${colorOf(o.event)}">${faces(o.event, true)}${o.allDay ? '' : `<b>${o.start}</b> `}${esc(o.event.title)}</button>`;
 }
 
 function renderMonth() {
@@ -324,10 +325,10 @@ function openDay(d) {
   const list = occurrences(d, d);
   $('#day-title').textContent = longDate(d);
   $('#day-list').innerHTML = list.length ? list.map((o) => `
-    <button type="button" class="ag-row${fade(o.event)}" data-id="${o.event.id}" data-date="${o.date}" style="--c:${colorOf(o.event)}">
+    <button type="button" class="ag-row${fade(o.event)}${off(o.event)}" data-id="${o.event.id}" data-date="${o.date}" style="--c:${colorOf(o.event)}">
       <span class="ag-time">${o.allDay ? 'Όλη<br>μέρα' : `${o.start}<br><span class="muted">${o.end}</span>`}</span>
       <span class="ag-main"><b>${faces(o.event, true)}${esc(o.event.title)}</b>
-        <span class="small muted">${esc([membersText(o.event), o.event.location].filter(Boolean).join(' · '))}${o.series ? ' · ↻' : ''}</span></span>
+        <span class="small muted">${esc([membersText(o.event), o.event.location].filter(Boolean).join(' · '))}${o.series ? ' · ↻' : ''}${o.event.cancelled ? ' · Ακυρώθηκε' : ''}</span></span>
     </button>`).join('') : '<p class="empty small">Τίποτα αυτή τη μέρα.</p>';
   const dlg = $('#day-dlg');
   dlg.dataset.day = d;
@@ -381,8 +382,8 @@ function needsTitle(catId) {
 /** Shows "Τι" only where it says something: for "Άλλο", no category, or an older activity with its own title. */
 function syncTitle() {
   const cat = form.category;
-  const own = state.editing && state.editing.event.category === cat
-    && state.editing.event.title !== categoryById(cat)?.name;
+  const src = state.editing?.event || state.copyOf;
+  const own = src && src.category === cat && src.title !== categoryById(cat)?.name;
   $('#title-box').hidden = !(needsTitle(cat) || own);
 }
 
@@ -400,9 +401,13 @@ function syncMap() {
 function openEvent({ ev = null, date = null, start = null } = {}) {
   fillChoices(ev);
   state.editing = ev ? { event: ev, date } : null;
+  state.copyOf = null;
   state.timeTouched = !!start;
   $('#event-title').textContent = ev ? 'Δραστηριότητα' : 'Νέα δραστηριότητα';
   $('#event-delete').hidden = !ev;
+  $('#event-copy').hidden = !ev;
+  $('#cancel-box').hidden = !ev;
+  $('#f-cancelled').checked = !!ev?.cancelled;
   $('#event-err').hidden = true;
   const src = ev || {};
   $('#f-title').value = src.title || '';
@@ -428,6 +433,31 @@ function openEvent({ ev = null, date = null, start = null } = {}) {
   syncTitle();
   syncMap();
   $('#event-dlg').showModal();
+}
+
+/**
+ * Turns the open activity into a new one with the same details, to save on another date.
+ * A copy is a single activity: repeating can be turned on again by hand.
+ */
+function copyEvent() {
+  const cur = state.editing;
+  if (!cur) return;
+  state.copyOf = cur.event;
+  state.editing = null;
+  $('#event-title').textContent = 'Αντίγραφο';
+  $('#event-delete').hidden = true;
+  $('#event-copy').hidden = true;
+  $('#cancel-box').hidden = true;
+  $('#f-cancelled').checked = false;
+  $('#series-note').hidden = true;
+  $('#event-err').hidden = true;
+  form.repeat = 0;
+  form.days = [];
+  $('#f-until').value = '';
+  syncAllDay();
+  syncTitle();
+  toast('Άλλαξε ό,τι θέλεις και πάτα Αποθήκευση');
+  $('#f-date').focus();
 }
 
 /**
@@ -467,6 +497,7 @@ function readForm() {
     endDate: allDay && form.repeat === 0 && $('#f-end-date').value ? $('#f-end-date').value : date,
     location: $('#f-location').value.trim(),
     notes: $('#f-notes').value.trim(),
+    cancelled: !$('#cancel-box').hidden && $('#f-cancelled').checked,
     repeatDays: form.repeat ? form.days : null,
     repeatEvery: form.repeat || 1,
     repeatUntil: form.repeat ? $('#f-until').value : '',
@@ -908,6 +939,7 @@ function init() {
   });
   $('#event-form').addEventListener('submit', saveEvent);
   $('#event-delete').addEventListener('click', deleteEvent);
+  $('#event-copy').addEventListener('click', copyEvent);
 
   document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
   document.querySelectorAll('dialog').forEach((d) => d.addEventListener('click', (e) => { if (e.target === d) d.close(); }));

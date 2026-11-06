@@ -88,10 +88,12 @@ create table if not exists sched_events (
                                  and repeat_days <@ array[1,2,3,4,5,6,7]::smallint[])),
   check (repeat_until is null or repeat_until >= start_date)
 );
+-- Cancelled: it stays on the calendar, struck through, instead of being deleted.
+alter table sched_events add column if not exists cancelled boolean not null default false;
 create index if not exists sched_events_range_idx on sched_events (household_id, start_date);
 create index if not exists sched_events_parent_idx on sched_events (parent_id);
 
--- Dates removed from a series (cancelled, or replaced by an edited copy).
+-- Dates removed from a series (deleted, or replaced by an edited copy).
 create table if not exists sched_skips (
   event_id     uuid not null references sched_events(id) on delete cascade,
   household_id uuid not null references households(id) on delete cascade,
@@ -169,7 +171,7 @@ language sql stable set search_path = public as $$
     'id', e.id, 'title', e.title, 'category', e.category_id, 'members', to_json(e.member_ids),
     'date', to_char(e.start_date, 'YYYY-MM-DD'), 'endDate', to_char(e.end_date, 'YYYY-MM-DD'),
     'start', to_char(e.start_time, 'HH24:MI'), 'end', to_char(e.end_time, 'HH24:MI'),
-    'location', e.location, 'notes', e.notes,
+    'location', e.location, 'notes', e.notes, 'cancelled', e.cancelled,
     'repeatDays', to_json(e.repeat_days), 'repeatEvery', e.repeat_every,
     'repeatUntil', to_char(e.repeat_until, 'YYYY-MM-DD'),
     'parent', e.parent_id, 'parentDate', to_char(e.parent_date, 'YYYY-MM-DD'),
@@ -209,6 +211,7 @@ begin
   if r.end_date < r.start_date then raise exception 'Η λήξη είναι πριν την έναρξη'; end if;
   r.location := btrim(coalesce(ev ->> 'location', ''));
   r.notes := btrim(coalesce(ev ->> 'notes', ''));
+  r.cancelled := coalesce((ev ->> 'cancelled')::boolean, false);
   r.repeat_every := coalesce(nullif(ev ->> 'repeatEvery', '')::smallint, 1);
   if jsonb_typeof(ev -> 'repeatDays') = 'array' and jsonb_array_length(ev -> 'repeatDays') > 0 then
     r.repeat_days := (select array_agg(distinct x::smallint order by x::smallint)
@@ -290,7 +293,7 @@ begin
   if old.repeat_days is null or scope = 'all' then
     update sched_events e set title = r.title, category_id = r.category_id, member_ids = r.member_ids,
            start_date = r.start_date, end_date = r.end_date, start_time = r.start_time, end_time = r.end_time,
-           location = r.location, notes = r.notes, repeat_days = r.repeat_days, repeat_every = r.repeat_every,
+           location = r.location, notes = r.notes, cancelled = r.cancelled, repeat_days = r.repeat_days, repeat_every = r.repeat_every,
            repeat_until = r.repeat_until
     where e.id = old.id;
     return json_build_object('ok', true, 'id', old.id);
