@@ -1,14 +1,14 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=28';
-import * as api from './api.js?v=28';
-import * as live from './live.js?v=28';
-import { ApiError } from './api.js?v=28';
-import { STORAGE_PREFIX } from './config.js?v=28';
-import { attachPlaces } from './places.js?v=28';
+import * as supa from './supa.js?v=29';
+import * as api from './api.js?v=29';
+import * as live from './live.js?v=29';
+import { ApiError } from './api.js?v=29';
+import { STORAGE_PREFIX } from './config.js?v=29';
+import { attachPlaces } from './places.js?v=29';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=28';
+} from './dates.js?v=29';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -20,7 +20,10 @@ const VIEWS = ['week', 'month'];
 const PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948', '#00a3b4', '#52514e'];
 // Height of one hour in the week view; taller on a phone, where the columns are narrow.
 const narrow = matchMedia('(max-width: 600px)');
-const hourPx = () => (narrow.matches ? 60 : 44);
+// A computer (mouse, wide screen): the hour height is fitted so the whole week shows without scrolling.
+const desktop = matchMedia('(min-width: 900px) and (hover: hover) and (pointer: fine)');
+let fitHour = 44;
+const hourPx = () => (narrow.matches ? 60 : desktop.matches ? fitHour : 44);
 // Weeks drawn on either side of the shown week, so a swipe glides on without redrawing.
 const WEEKS_AROUND = 4;
 const wide = () => matchMedia('(min-width: 700px)').matches;
@@ -302,6 +305,18 @@ function renderWeek() {
       </div>
     </div>${empty}`;
   weekScroll(from, first);
+  if (desktop.matches && !fitting) fitWeek(hours, HOUR_PX);
+}
+
+/** On a computer: draws the week again with the hour height that makes the page fit the window. */
+let fitting = false;
+function fitWeek(hours, used) {
+  const over = $('#main').getBoundingClientRect().bottom + scrollY - innerHeight;
+  const next = Math.max(24, Math.min(60, Math.floor(used - over / hours)));
+  if (next === used) return;
+  fitHour = next;
+  fitting = true;
+  try { renderWeek(); } finally { fitting = false; }
 }
 
 /**
@@ -366,8 +381,9 @@ function renderMonth() {
   const t = today();
   // Drop the last week when it is wholly in the next month.
   const cells = grid[35].slice(0, 7) !== m ? grid.slice(0, 35) : grid;
-  const max = wide() ? 4 : 3;
-  $('#main').innerHTML = `<div class="month card">
+  const max = desktop.matches && monthFit ? monthFit.max : wide() ? 4 : 3;
+  const cellH = desktop.matches && monthFit ? `--mo-h:${monthFit.h}px` : '';
+  $('#main').innerHTML = `<div class="month card" style="${cellH}">
     <div class="mo-head">${DAY_SHORT.map((d) => `<div>${d}</div>`).join('')}</div>
     <div class="mo-grid">${cells.map((d) => {
       // The picked people's activities first, so they are not hidden behind "+N".
@@ -386,6 +402,21 @@ function renderMonth() {
     if (!reduce) $('.month').animate([{ transform: `translateX(${state.slide * 48}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 220, easing: 'ease-out' });
     state.slide = 0;
   }
+  if (desktop.matches && !fitting) fitMonth(cells.length / 7);
+}
+
+/** On a computer: day boxes as tall as fits the window, with as many activities as fit in them. */
+let monthFit = null;
+function fitMonth(rows) {
+  const grid = $('.mo-grid');
+  const avail = innerHeight - (grid.getBoundingClientRect().top + scrollY) - 18;
+  const h = Math.max(64, Math.floor(avail / rows));
+  // A day number of 24px, then rows of about 20px for each activity.
+  const max = Math.max(1, Math.floor((h - 30) / 20));
+  if (monthFit && monthFit.h === h && monthFit.max === max) return;
+  monthFit = { h, max };
+  fitting = true;
+  try { renderMonth(); } finally { fitting = false; }
 }
 
 /* ----------------------------------------------------------- day window */
@@ -1071,7 +1102,6 @@ function init() {
   // The circles stay in sight when the calendar scrolls: on a wide or sideways screen in the
   // top bar, between the week and «Σήμερα»; on an upright phone in the bottom bar, next to the tabs.
   // A computer (mouse, wide screen) keeps them big in their own row under the tabs.
-  const desktop = matchMedia('(min-width: 900px) and (hover: hover) and (pointer: fine)');
   const peopleInBar = matchMedia('(orientation: landscape), (min-width: 700px)');
   const placePeople = () => {
     const box = $('#people');
@@ -1085,6 +1115,13 @@ function init() {
   placePeople();
   peopleInBar.addEventListener('change', placePeople);
   desktop.addEventListener('change', placePeople);
+  // A computer window changed size: fit the week or month to it again.
+  let fitTimer;
+  addEventListener('resize', () => {
+    if (!desktop.matches) return;
+    clearTimeout(fitTimer);
+    fitTimer = setTimeout(() => { if (state.data && !document.querySelector('dialog[open]')) render(); }, 150);
+  });
   // The day names stick just under the top bar, whatever its height.
   const bar = $('.topbar');
   new ResizeObserver(() => document.documentElement.style.setProperty('--topbar-h', `${bar.offsetHeight}px`)).observe(bar);

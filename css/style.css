@@ -658,11 +658,17 @@ textarea.field { resize: vertical; min-height: 44px; }
 /* Computer (mouse, wide screen): the calendar fills the window, the circles are big in their own
    row, and the day names are as before. Phones and tablets are not affected. */
 @media (min-width: 900px) and (hover: hover) and (pointer: fine) {
-  .topbar-inner, .tabs-wrap, main, .people { max-width: none; }
+  /* Narrower than the window, centred; the week fits the height (see fitWeek in app.js). */
+  body { padding-bottom: 0; }
+  .topbar-inner, .tabs-wrap, main, .people { max-width: 1400px; }
+  main { padding-bottom: 16px; }
+  /* The circles sit up on the same band as «Εβδομάδα» / «Μήνας». */
+  .people { margin-top: -46px; pointer-events: none; }
+  .person { pointer-events: auto; }
   .topbar-inner { padding-left: 24px; padding-right: 24px; }
   .tabs-wrap { padding-left: 24px; padding-right: 24px; }
   main { padding-left: 24px; padding-right: 24px; }
-  .people { gap: clamp(10px, 3.5vw, 40px); padding: 14px 16px 6px; }
+  .people { gap: clamp(10px, 3.5vw, 40px); padding: 6px 16px 4px; }
   .person { gap: 6px; }
   .person .ph { width: clamp(38px, 10.2vw, 90px); border-width: 3px; }
   .person .initial { font-size: clamp(16px, 4.2vw, 36px); }
@@ -671,4 +677,5 @@ textarea.field { resize: vertical; min-height: 44px; }
   .wk-day { flex-direction: column; gap: 1px; padding: 8px 0; }
   .wk-day .wd { font-size: 12px; }
   .wk-day .dn { width: 32px; height: 32px; font-size: 18px; }
+  .month[style*="--mo-h"] .mo-cell { min-height: 0; height: var(--mo-h); overflow: hidden; }
 }
