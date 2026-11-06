@@ -1,14 +1,14 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=18';
-import * as api from './api.js?v=18';
-import * as live from './live.js?v=18';
-import { ApiError } from './api.js?v=18';
-import { STORAGE_PREFIX } from './config.js?v=18';
-import { attachPlaces } from './places.js?v=18';
+import * as supa from './supa.js?v=19';
+import * as api from './api.js?v=19';
+import * as live from './live.js?v=19';
+import { ApiError } from './api.js?v=19';
+import { STORAGE_PREFIX } from './config.js?v=19';
+import { attachPlaces } from './places.js?v=19';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=18';
+} from './dates.js?v=19';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -239,9 +239,12 @@ function applyPicks() {
 
 function renderWeek() {
   const from = weekStart(state.anchor);
-  const days = Array.from({ length: 7 }, (_, i) => addDays(from, i));
-  $('#range-label').textContent = rangeLabel(days[0], days[6]);
-  const occ = occurrences(days[0], days[6]);
+  // On a phone the days run on: the week before and after are drawn too, so a swipe flows into them.
+  const strip = narrow.matches;
+  const first = strip ? addDays(from, -7) : from;
+  const days = Array.from({ length: strip ? 21 : 7 }, (_, i) => addDays(first, i));
+  $('#range-label').textContent = rangeLabel(from, addDays(from, 6));
+  const occ = occurrences(days[0], days[days.length - 1]);
   const t = today();
 
   const allDay = days.map((d) => occ.filter((o) => o.allDay && o.date <= d && o.endDate >= d));
@@ -255,10 +258,10 @@ function renderWeek() {
   const hours = endH - startH;
   const HOUR_PX = hourPx();
 
-  const head = days.map((d, i) => `<button type="button" class="wk-day${i > 4 ? ' we' : ''}${d === t ? ' today' : ''}" data-day="${d}">
-      <span class="wd">${DAY_SHORT[i]}</span><span class="dn">${Number(d.slice(8))}</span></button>`).join('');
+  const head = days.map((d, i) => `<button type="button" class="wk-day${i % 7 > 4 ? ' we' : ''}${d === t ? ' today' : ''}" data-day="${d}">
+      <span class="wd">${DAY_SHORT[i % 7]}</span><span class="dn">${Number(d.slice(8))}</span></button>`).join('');
   const allDayRow = allDay.some((l) => l.length) ? `<div class="wk-allday"><div class="gutter small muted">όλη<br>μέρα</div>${allDay.map((list, i) =>
-    `<div class="ad-cell${i > 4 ? ' we' : ''}">${list.map((o) => chip(o, days[i])).join('')}</div>`).join('')}</div>` : '';
+    `<div class="ad-cell${i % 7 > 4 ? ' we' : ''}">${list.map((o) => chip(o, days[i])).join('')}</div>`).join('')}</div>` : '';
   const gutter = Array.from({ length: hours }, (_, i) => `<div class="hr" style="top:${i * HOUR_PX}px">${pad(startH + i)}:00</div>`).join('');
   const cols = timed.map((list, i) => {
     const d = days[i];
@@ -283,12 +286,12 @@ function renderWeek() {
       const m = n.getHours() * 60 + n.getMinutes() - startH * 60;
       if (m >= 0 && m <= hours * 60) now = `<div class="now" style="top:${(m / 60) * HOUR_PX}px"></div>`;
     }
-    return `<div class="wk-col${i > 4 ? ' we' : ''}${d === t ? ' today' : ''}" data-day="${d}">${blocks}${now}</div>`;
+    return `<div class="wk-col${i % 7 > 4 ? ' we' : ''}${d === t ? ' today' : ''}" data-day="${d}">${blocks}${now}</div>`;
   }).join('');
 
-  const empty = !occ.length ? `<p class="empty small">Τίποτα αυτή την εβδομάδα. Πάτα σε μια ώρα ή στο «Νέο» για να προσθέσεις.</p>` : '';
+  const empty = !occ.some((o) => o.date <= addDays(from, 6) && (o.endDate || o.date) >= from) ? `<p class="empty small">Τίποτα αυτή την εβδομάδα. Πάτα σε μια ώρα ή στο «Νέο» για να προσθέσεις.</p>` : '';
   $('#main').innerHTML = `
-    <div class="week card">
+    <div class="week card" style="--n:${days.length}">
       <div class="wk-top"><div class="wk-head"><div class="gutter"></div>${head}</div></div>
       <div class="wk-body">
         ${allDayRow}
@@ -297,31 +300,52 @@ function renderWeek() {
         </div>
       </div>
     </div>${empty}`;
-  weekScroll(from);
+  weekScroll(from, first, strip);
 }
 
 /**
- * On a phone the week is wider than the screen: about three and a half days show and a swipe
- * shows the rest. The day names follow the sideways scroll, and the place is kept when the
- * calendar is drawn again. A new week opens on today, or on Monday (Sunday when coming back).
+ * On a phone about three and a half days show and the days run on into the weeks before and
+ * after. The day names follow the sideways scroll. When the scroll stops in another week, that
+ * week becomes the shown one and the strip is drawn again around it, at the same place, so
+ * nothing jumps. A week opens on today, or on its Monday.
  */
-function weekScroll(from) {
+let settleTimer;
+let touching = false;
+function weekScroll(from, first, strip) {
   const body = $('.wk-body');
   const top = $('.wk-top');
-  const max = body.scrollWidth - body.clientWidth;
-  if (max > 0) {
-    let x = 0;
-    const today = body.querySelector('.wk-col.today');
-    if (state.weekX && state.weekX.week === from) x = state.weekX.x === 'end' ? max : state.weekX.x;
-    else if (today) x = today.offsetLeft - body.querySelector('.wk-grid > .gutter').offsetWidth;
-    body.scrollLeft = x;
-    top.scrollLeft = body.scrollLeft;
-  }
-  state.weekX = { week: from, x: body.scrollLeft };
+  if (!strip) return;
+  const gut = body.querySelector('.wk-grid > .gutter').offsetWidth;
+  const dayW = body.querySelector('.wk-col').getBoundingClientRect().width;
+  const t = today();
+  let day = from;
+  if (state.weekDay && state.weekDay.week === from) day = state.weekDay.day;
+  else if (t >= from && t <= addDays(from, 6)) day = t;
+  body.scrollLeft = body.querySelector(`.wk-col[data-day="${day}"]`).offsetLeft - gut;
+  top.scrollLeft = body.scrollLeft;
+  state.weekDay = { week: from, day };
+
+  const settle = () => {
+    if (touching || !document.body.contains(body)) return;
+    const week = weekStart(state.weekDay.day);
+    if (week === from || document.querySelector('dialog[open]')) return;
+    state.anchor = state.weekDay.day;
+    state.weekDay = { week, day: state.weekDay.day };
+    show();
+  };
   body.addEventListener('scroll', () => {
     top.scrollLeft = body.scrollLeft;
-    state.weekX = { week: from, x: body.scrollLeft };
+    const d = addDays(first, Math.max(0, Math.round(body.scrollLeft / dayW)));
+    state.weekDay = { week: from, day: d };
+    const w = weekStart(d);
+    $('#range-label').textContent = rangeLabel(w, addDays(w, 6));
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(settle, 250);
   }, { passive: true });
+  body.addEventListener('touchstart', () => { touching = true; }, { passive: true });
+  const up = () => { touching = false; clearTimeout(settleTimer); settleTimer = setTimeout(settle, 250); };
+  body.addEventListener('touchend', up, { passive: true });
+  body.addEventListener('touchcancel', up, { passive: true });
 }
 
 function chip(o, day) {
@@ -881,7 +905,7 @@ function init() {
   window.addEventListener('hashchange', () => { if (VIEWS.includes(location.hash.slice(1))) setView(location.hash.slice(1)); });
   $('#prev').addEventListener('click', () => step(-1));
   $('#next').addEventListener('click', () => step(1));
-  $('#today').addEventListener('click', () => { state.anchor = today(); show(); });
+  $('#today').addEventListener('click', () => { state.anchor = today(); state.weekDay = null; show(); });
   $('#refresh').addEventListener('click', () => fetchData());
   $('#fab').addEventListener('click', () => openEvent());
 
@@ -919,32 +943,15 @@ function init() {
     if (cell && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openDay(cell.dataset.day); }
   });
 
-  // Swipe left or right to move a week or a month.
-  // When the week scrolls sideways (phone), the swipe first scrolls the days, and moves a week
-  // only from the first or last day.
+  // Swipe left or right to move a week or a month. On a phone the week view scrolls on its own instead.
   let touch = null;
-  $('#main').addEventListener('touchstart', (e) => {
-    const body = e.target.closest('.wk-body');
-    const max = body ? body.scrollWidth - body.clientWidth : 0;
-    touch = e.touches.length === 1 ? {
-      x: e.touches[0].clientX, y: e.touches[0].clientY,
-      atStart: !max || body.scrollLeft <= 2, atEnd: !max || body.scrollLeft >= max - 2,
-    } : null;
-  }, { passive: true });
+  $('#main').addEventListener('touchstart', (e) => { touch = e.touches.length === 1 ? [e.touches[0].clientX, e.touches[0].clientY] : null; }, { passive: true });
   $('#main').addEventListener('touchend', (e) => {
-    if (!touch || !state.data) return;
-    const dx = e.changedTouches[0].clientX - touch.x;
-    const dy = e.changedTouches[0].clientY - touch.y;
-    const { atStart, atEnd } = touch;
+    if (!touch || !state.data || (state.view === 'week' && narrow.matches)) return;
+    const dx = e.changedTouches[0].clientX - touch[0];
+    const dy = e.changedTouches[0].clientY - touch[1];
     touch = null;
-    if (Math.abs(dx) <= 70 || Math.abs(dy) >= 45) return;
-    if (dx < 0 && atEnd) {
-      if (state.view === 'week') state.weekX = { week: weekStart(addDays(state.anchor, 7)), x: 0 };
-      step(1);
-    } else if (dx > 0 && atStart) {
-      if (state.view === 'week') state.weekX = { week: weekStart(addDays(state.anchor, -7)), x: 'end' };
-      step(-1);
-    }
+    if (Math.abs(dx) > 70 && Math.abs(dy) < 45) step(dx < 0 ? 1 : -1);
   }, { passive: true });
 
   $('#day-list').addEventListener('click', (e) => {
