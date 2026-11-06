@@ -464,7 +464,7 @@ main { padding-top: 12px; }
 .faces.sm i + i { margin-left: -4px; }
 @media (max-width: 600px) {
   /* About three and a half days on the screen; swipe for the rest, stopping at a day. */
-  .week { --gut: 30px; --day: calc((100cqw - 30px) / 3.5); }
+  .week { --gut: 36px; --day: calc((100cqw - var(--gut)) / 3.5); }
   .wk-col { scroll-snap-align: start; }
   .gutter { font-size: 10px; padding-right: 3px; }
   .hr { right: 3px; }
@@ -603,4 +603,12 @@ textarea.field { resize: vertical; min-height: 44px; }
   .person .nm { font-size: 13px; }
   .wk-day { flex-direction: row; justify-content: center; gap: 6px; padding: 3px 0; }
   .wk-day .dn { width: 26px; height: 26px; font-size: 15px; }
+}
+
+/* On a phone the calendar runs edge to edge, so no width is lost at the sides. */
+@media (max-width: 600px), (max-height: 500px) and (orientation: landscape) {
+  .week, .month { margin-left: -16px; margin-right: -16px; border-radius: 0; border-left: 0; border-right: 0; box-shadow: none; }
+}
+@media (max-width: 360px) {
+  .week, .month { margin-left: -12px; margin-right: -12px; }
 }
