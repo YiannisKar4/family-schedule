@@ -22,7 +22,10 @@ Live at **https://yianniskar4.github.io/family-schedule/**
   give them a photo (the site shrinks it to a small square before saving). With a photo already there,
   the same tap offers Αλλαγή or Αφαίρεση. Hidden ones stay on old
   activities but are not offered for new ones.
-- Swipe left or right to move a week or a month. Coming back to the page reloads what others added.
+- Swipe left or right to move a week or a month.
+- **Live**: what someone adds or changes on another phone shows up within a second, with no refresh.
+  The page keeps a connection open to Supabase Realtime ([`js/live.js`](js/live.js)) and loads again only when
+  the database says something changed. After a phone sleeps, it reconnects and catches up.
 
 ## How it fits together
 
@@ -45,6 +48,8 @@ Phone / laptop ──► GitHub Pages (this repo: HTML + JS, no build step)
 - A weekly series is one row in `sched_events` (`repeat_days`, `repeat_every`, `repeat_until`).
   The site works out its dates ([`js/dates.js`](js/dates.js)). A cancelled date is a row in `sched_skips`;
   a date changed on its own becomes its own event with `parent_id` pointing at the series.
+- `schema.sql` adds the four tables to the `supabase_realtime` publication; Realtime still applies
+  Row Level Security, so each household hears only about its own rows.
 - The site calls only the `api_sched_*` functions in [`supabase/schema.sql`](supabase/schema.sql):
   `api_sched_read`, `api_sched_add`, `api_sched_update`, `api_sched_delete`,
   `api_sched_save_member`, `api_sched_member_photo`, `api_sched_save_category`, `api_sched_order`.
