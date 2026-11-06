@@ -1,14 +1,14 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=19';
-import * as api from './api.js?v=19';
-import * as live from './live.js?v=19';
-import { ApiError } from './api.js?v=19';
-import { STORAGE_PREFIX } from './config.js?v=19';
-import { attachPlaces } from './places.js?v=19';
+import * as supa from './supa.js?v=20';
+import * as api from './api.js?v=20';
+import * as live from './live.js?v=20';
+import { ApiError } from './api.js?v=20';
+import { STORAGE_PREFIX } from './config.js?v=20';
+import { attachPlaces } from './places.js?v=20';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=19';
+} from './dates.js?v=20';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -701,7 +701,34 @@ async function settingsCall(fn, okMsg) {
   }
 }
 
+const THEME_KEY = 'sched.theme';
+
+/** Light, dark or the system's. Saved on this device only; index.html applies it before first paint. */
+function theme() {
+  try { return localStorage.getItem(THEME_KEY) || 'system'; } catch { return 'system'; }
+}
+
+function setTheme(t) {
+  try {
+    if (t === 'system') localStorage.removeItem(THEME_KEY);
+    else localStorage.setItem(THEME_KEY, t);
+  } catch { /* private mode */ }
+  if (t === 'system') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = t;
+  renderThemeSeg();
+}
+
+function renderThemeSeg() {
+  const t = theme();
+  document.querySelectorAll('#theme-seg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.themeOpt === t)));
+}
+
 function initSettings() {
+  renderThemeSeg();
+  $('#theme-seg').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-theme-opt]');
+    if (b) setTheme(b.dataset.themeOpt);
+  });
   $('#open-settings').addEventListener('click', () => {
     if (!state.data) return;
     renderSettings();
