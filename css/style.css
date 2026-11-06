@@ -334,33 +334,48 @@ dialog.ask { width: min(400px, calc(100vw - 32px)); border-radius: 18px; border:
   .today-btn { padding: 6px 10px; font-size: 13px; }
 }
 
-/* Who is shown: one big circle per person. Tap one to see only theirs. */
+/* Who is shown: one circle per person. Tap one to see only theirs. */
 .people {
-  display: flex; justify-content: center; gap: clamp(10px, 3.5vw, 40px); overflow-x: auto;
-  padding: 14px 16px 2px; max-width: 1080px; margin: 0 auto; scrollbar-width: none;
+  display: flex; justify-content: center; gap: clamp(10px, 4vw, 24px); overflow-x: auto;
+  padding: 6px 16px 0; max-width: 1080px; margin: 0 auto; scrollbar-width: none;
 }
 .people[hidden] { display: none; }
 .people::-webkit-scrollbar { display: none; }
 .person {
-  flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px;
   background: none; border: 0; padding: 4px; cursor: pointer; color: var(--text-secondary);
   -webkit-tap-highlight-color: transparent; transition: opacity 0.35s ease, filter 0.35s ease, transform 0.15s ease;
 }
 .person .ph {
-  width: clamp(38px, 10.2vw, 90px); aspect-ratio: 1; border-radius: 50%; overflow: hidden;
+  width: 32px; aspect-ratio: 1; border-radius: 50%; overflow: hidden;
   display: grid; place-items: center; background: color-mix(in srgb, var(--c) 18%, var(--surface-2));
-  border: clamp(2px, 0.36vw, 3px) solid var(--c); box-shadow: var(--shadow);
+  border: 2px solid var(--c); box-shadow: var(--shadow);
 }
 .person .ph { transition: box-shadow 0.35s ease, transform 0.35s ease; }
 .person .nm { transition: color 0.35s ease; }
 .person.on .ph { transform: scale(1.06); }
 .person .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.person .initial { font-size: clamp(16px, 4.2vw, 36px); font-weight: 700; color: var(--c); }
-.person .nm { font-size: clamp(13px, 2vw, 17px); font-weight: 600; }
+.person .initial { font-size: 15px; font-weight: 700; color: var(--c); }
+.person .nm { font-size: 12px; font-weight: 600; line-height: 1.2; }
 .person:active { transform: scale(0.96); }
-.person.on .ph { box-shadow: 0 0 0 clamp(2px, 0.36vw, 3px) var(--surface-1), 0 0 0 clamp(4px, 0.72vw, 6px) var(--c); }
+.person.on .ph { box-shadow: 0 0 0 2px var(--surface-1), 0 0 0 4px var(--c); }
 .person.on .nm { color: var(--text-primary); }
 .people.picking .person:not(.on) { opacity: 0.4; filter: grayscale(0.6); }
+/* Wide or sideways screen: the circles sit in the top bar, between the week and «Σήμερα». */
+.people.in-bar { flex: 1 1 auto; min-width: 0; justify-content: flex-start; gap: 6px; padding: 6px; margin: -6px 0; max-width: none; }
+.people.in-bar > :first-child { margin-left: auto; }
+.people.in-bar > :last-child { margin-right: auto; }
+.people.in-bar ~ .spacer { display: none; }
+.people.in-bar .person { padding: 0 2px; }
+.people.in-bar .ph { width: 30px; }
+.people.in-bar .initial { font-size: 14px; }
+.people.in-bar .nm { display: none; }
+@media (min-width: 1000px) {
+  .people.in-bar { gap: 14px; }
+  .people.in-bar .person { flex-direction: row; gap: 6px; }
+  .people.in-bar .nm { display: block; font-size: 13px; }
+}
+@media (max-width: 899px) { .topbar-inner:has(.people.in-bar:not([hidden])) .brand { display: none; } }
 /* Activities of people not picked: still there, but in the background. */
 .ev.faded, .chip.faded, .ag-row.faded {
   background: color-mix(in srgb, var(--c) 5%, var(--surface-1)); border-left-color: color-mix(in srgb, var(--c) 25%, var(--surface-2));
@@ -399,11 +414,11 @@ main { padding-top: 12px; }
 .wk-head > .gutter, .wk-allday > .gutter, .wk-grid > .gutter { position: sticky; left: 0; z-index: 4; }
 .wk-head > .gutter, .wk-allday > .gutter { background: var(--surface-1); }
 .wk-day {
-  border: 0; background: none; cursor: pointer; padding: 8px 0 6px; display: flex; flex-direction: column; align-items: center; gap: 1px;
+  border: 0; background: none; cursor: pointer; padding: 5px 0 7px; display: flex; flex-direction: column; align-items: center; gap: 1px;
   color: var(--text-secondary); border-radius: 0;
 }
-.wk-day .wd { font-size: 12px; }
-.wk-day .dn { font-size: 18px; font-weight: 650; color: var(--text-primary); width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; }
+.wk-day .wd { font-size: 11px; line-height: 14px; }
+.wk-day .dn { font-size: 15px; font-weight: 650; color: var(--text-primary); width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; }
 .wk-day.today .dn { background: var(--accent); color: var(--accent-ink); }
 .wk-day.today .wd { color: var(--accent); font-weight: 600; }
 .wk-day:hover .dn { background: var(--surface-sunk); }
@@ -473,7 +488,7 @@ main { padding-top: 12px; }
   .ev-s { font-size: 10px; column-gap: 2px; }
   .faces i { width: 16px; height: 16px; font-size: 9px; }
   .faces i + i { margin-left: -6px; }
-  .wk-day .dn { width: 28px; height: 28px; font-size: 16px; }
+  .wk-day .dn { width: 24px; height: 24px; font-size: 14px; }
 }
 
 /* chips: all-day row and month cells */
@@ -597,13 +612,9 @@ textarea.field { resize: vertical; min-height: 44px; }
   .tab { flex-direction: row; gap: 6px; padding: 5px 8px; font-size: 13px; }
   .tab svg { width: 18px; height: 18px; }
   .fab { bottom: calc(48px + env(safe-area-inset-bottom)); }
-  .people { padding-top: 6px; }
-  .person { flex-direction: row; gap: 6px; }
-  .person .ph { width: 30px; }
-  .person .initial { font-size: 14px; }
-  .person .nm { font-size: 13px; }
-  .wk-day { flex-direction: row; justify-content: center; gap: 6px; padding: 3px 0; }
-  .wk-day .dn { width: 26px; height: 26px; font-size: 15px; }
+  .people.in-bar .ph { width: 28px; }
+  .wk-day { flex-direction: row; justify-content: center; gap: 5px; padding: 4px 0; }
+  .wk-day .dn { width: 22px; height: 22px; font-size: 14px; }
 }
 
 /* On a phone the calendar runs edge to edge, so no width is lost at the sides. */
