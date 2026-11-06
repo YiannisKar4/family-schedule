@@ -341,13 +341,16 @@ dialog.ask { width: min(400px, calc(100vw - 32px)); border-radius: 18px; border:
 .person {
   flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px;
   background: none; border: 0; padding: 4px; cursor: pointer; color: var(--text-secondary);
-  -webkit-tap-highlight-color: transparent; transition: opacity 0.15s, transform 0.15s;
+  -webkit-tap-highlight-color: transparent; transition: opacity 0.35s ease, filter 0.35s ease, transform 0.15s ease;
 }
 .person .ph {
   width: clamp(38px, 10.2vw, 90px); aspect-ratio: 1; border-radius: 50%; overflow: hidden;
   display: grid; place-items: center; background: color-mix(in srgb, var(--c) 18%, var(--surface-2));
   border: clamp(2px, 0.36vw, 3px) solid var(--c); box-shadow: var(--shadow);
 }
+.person .ph { transition: box-shadow 0.35s ease, transform 0.35s ease; }
+.person .nm { transition: color 0.35s ease; }
+.person.on .ph { transform: scale(1.06); }
 .person .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .person .initial { font-size: clamp(16px, 4.2vw, 36px); font-weight: 700; color: var(--c); }
 .person .nm { font-size: clamp(13px, 2vw, 17px); font-weight: 600; }
@@ -364,6 +367,12 @@ dialog.ask { width: min(400px, calc(100vw - 32px)); border-radius: 18px; border:
 .ev.faded:hover, .chip.faded:hover, .ag-row.faded:hover { background: color-mix(in srgb, var(--c) 12%, var(--surface-1)); }
 /* The faces stay in colour, so who is on it shows even when faded. */
 .faded .faces { opacity: 0.85; }
+.ev, .chip, .ag-row { transition: background-color 0.35s ease, border-color 0.35s ease, color 0.35s ease; }
+.ev .ev-s, .chip b, .ag-row b, .ag-row .muted, .faces { transition: color 0.35s ease, opacity 0.35s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .person, .person .ph, .person .nm, .ev, .chip, .ag-row, .ev .ev-s, .chip b, .ag-row b, .ag-row .muted, .faces { transition: none; }
+  .person.on .ph { transform: none; }
+}
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; vertical-align: middle; }
 
 main { padding-top: 12px; }

@@ -1,12 +1,12 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=8';
-import * as api from './api.js?v=8';
-import { ApiError } from './api.js?v=8';
-import { STORAGE_PREFIX } from './config.js?v=8';
+import * as supa from './supa.js?v=9';
+import * as api from './api.js?v=9';
+import { ApiError } from './api.js?v=9';
+import { STORAGE_PREFIX } from './config.js?v=9';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=8';
+} from './dates.js?v=9';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -208,6 +208,25 @@ function renderPeople() {
   box.classList.toggle('picking', state.filter.length > 0);
   box.innerHTML = members.map((m) => { const on = state.filter.includes(m.id); return `<button type="button" class="person${on ? ' on' : ''}" data-id="${m.id}"
       style="--c:${m.color}" aria-pressed="${on}"><span class="ph">${avatar(m)}</span><span class="nm">${esc(m.name)}</span></button>`; }).join('');
+}
+
+/**
+ * Updates the circles and the faded activities in place, without drawing the calendar again,
+ * so the change fades smoothly instead of jumping.
+ */
+let reorderTimer;
+function applyPicks() {
+  const box = $('#people');
+  box.classList.toggle('picking', state.filter.length > 0);
+  box.querySelectorAll('.person').forEach((b) => {
+    const on = state.filter.includes(Number(b.dataset.id));
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', String(on));
+  });
+  document.querySelectorAll('.ev[data-id], .chip[data-id], .ag-row[data-id]').forEach((el) => {
+    const ev = state.data.events.find((x) => x.id === el.dataset.id);
+    if (ev) el.classList.toggle('faded', !picked(ev));
+  });
 }
 
 function renderWeek() {
@@ -770,7 +789,10 @@ function init() {
     const id = Number(b.dataset.id);
     state.filter = state.filter.includes(id) ? state.filter.filter((x) => x !== id) : [...state.filter, id];
     savePrefs();
-    render();
+    applyPicks();
+    // The month lists the picked people's activities first: reorder once the fade has played.
+    clearTimeout(reorderTimer);
+    if (state.view === 'month') reorderTimer = setTimeout(() => { if (!document.querySelector('dialog[open]')) render(); }, 400);
   });
 
   $('#main').addEventListener('click', (e) => {
