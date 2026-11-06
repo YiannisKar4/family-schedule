@@ -1,14 +1,14 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=30';
-import * as api from './api.js?v=30';
-import * as live from './live.js?v=30';
-import { ApiError } from './api.js?v=30';
-import { STORAGE_PREFIX } from './config.js?v=30';
-import { attachPlaces } from './places.js?v=30';
+import * as supa from './supa.js?v=31';
+import * as api from './api.js?v=31';
+import * as live from './live.js?v=31';
+import { ApiError } from './api.js?v=31';
+import { STORAGE_PREFIX } from './config.js?v=31';
+import { attachPlaces } from './places.js?v=31';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=30';
+} from './dates.js?v=31';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -967,12 +967,12 @@ function setView(view, anchor = null) {
   savePrefs();
   if (location.hash.slice(1) !== state.view) history.replaceState(null, '', `#${state.view}`);
   if (before === state.view || !state.data || matchMedia('(prefers-reduced-motion: reduce)').matches) return show();
-  // Week to month zooms out, month to week zooms in: the old view fades away, then the new one grows in.
+  // The old view fades away while it shrinks a little, then the new one grows in to full size.
+  // Never above full size, so the page never grows past the window (no scroll bar flashing).
   const main = $('#main');
-  const toMonth = state.view === 'month';
   const run = ++switchRun;
   main.getAnimations().forEach((a) => a.cancel());
-  main.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: `scale(${toMonth ? 0.97 : 1.03})` }],
+  main.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(0.98)' }],
     { duration: 140, easing: 'ease-in', fill: 'forwards' }).finished.then(() => {
     if (run !== switchRun) return;
     // Drawn at full size (the week and month measure themselves), hidden until the fade in starts.
@@ -980,7 +980,7 @@ function setView(view, anchor = null) {
     main.getAnimations().forEach((a) => a.cancel());
     show();
     main.style.opacity = '';
-    main.animate([{ opacity: 0, transform: `scale(${toMonth ? 1.03 : 0.97})` }, { opacity: 1, transform: 'none' }],
+    main.animate([{ opacity: 0, transform: 'scale(0.98)' }, { opacity: 1, transform: 'none' }],
       { duration: 260, easing: 'cubic-bezier(.2, .7, .3, 1)' });
   }, () => {});
 }
