@@ -239,10 +239,9 @@ function applyPicks() {
 
 function renderWeek() {
   const from = weekStart(state.anchor);
-  // On a phone the days run on: the week before and after are drawn too, so a swipe flows into them.
-  const strip = narrow.matches;
-  const first = strip ? addDays(from, -7) : from;
-  const days = Array.from({ length: strip ? 21 : 7 }, (_, i) => addDays(first, i));
+  // The days run on: the week before and after are drawn too, so a swipe flows into them.
+  const first = addDays(from, -7);
+  const days = Array.from({ length: 21 }, (_, i) => addDays(first, i));
   $('#range-label').textContent = rangeLabel(from, addDays(from, 6));
   const occ = occurrences(days[0], days[days.length - 1]);
   const t = today();
@@ -286,7 +285,7 @@ function renderWeek() {
       const m = n.getHours() * 60 + n.getMinutes() - startH * 60;
       if (m >= 0 && m <= hours * 60) now = `<div class="now" style="top:${(m / 60) * HOUR_PX}px"></div>`;
     }
-    return `<div class="wk-col${i % 7 > 4 ? ' we' : ''}${d === t ? ' today' : ''}" data-day="${d}">${blocks}${now}</div>`;
+    return `<div class="wk-col${i % 7 ? '' : ' mon'}${i % 7 > 4 ? ' we' : ''}${d === t ? ' today' : ''}" data-day="${d}">${blocks}${now}</div>`;
   }).join('');
 
   const empty = !occ.some((o) => o.date <= addDays(from, 6) && (o.endDate || o.date) >= from) ? `<p class="empty small">Τίποτα αυτή την εβδομάδα. Πάτα σε μια ώρα ή στο «Νέο» για να προσθέσεις.</p>` : '';
@@ -300,27 +299,26 @@ function renderWeek() {
         </div>
       </div>
     </div>${empty}`;
-  weekScroll(from, first, strip);
+  weekScroll(from, first);
 }
 
 /**
- * On a phone about three and a half days show and the days run on into the weeks before and
- * after. The day names follow the sideways scroll. When the scroll stops in another week, that
+ * A week shows (on a phone about three and a half days of it) and the days run on into the
+ * weeks before and after. The day names follow the sideways scroll. When the scroll stops in another week, that
  * week becomes the shown one and the strip is drawn again around it, at the same place, so
- * nothing jumps. A week opens on today, or on its Monday.
+ * nothing jumps. On a phone a week opens on today, elsewhere on its Monday.
  */
 let settleTimer;
 let touching = false;
-function weekScroll(from, first, strip) {
+function weekScroll(from, first) {
   const body = $('.wk-body');
   const top = $('.wk-top');
-  if (!strip) return;
   const gut = body.querySelector('.wk-grid > .gutter').offsetWidth;
   const dayW = body.querySelector('.wk-col').getBoundingClientRect().width;
   const t = today();
   let day = from;
   if (state.weekDay && state.weekDay.week === from) day = state.weekDay.day;
-  else if (t >= from && t <= addDays(from, 6)) day = t;
+  else if (narrow.matches && t >= from && t <= addDays(from, 6)) day = t;
   body.scrollLeft = body.querySelector(`.wk-col[data-day="${day}"]`).offsetLeft - gut;
   top.scrollLeft = body.scrollLeft;
   state.weekDay = { week: from, day };
@@ -376,6 +374,11 @@ function renderMonth() {
       </div>`;
     }).join('')}</div>
   </div>`;
+  if (state.slide) {
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reduce) $('.month').animate([{ transform: `translateX(${state.slide * 48}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 220, easing: 'ease-out' });
+    state.slide = 0;
+  }
 }
 
 /* ----------------------------------------------------------- day window */
@@ -898,8 +901,23 @@ function renderLogin() {
 
 /* ---------------------------------------------------------- navigation */
 
+/** Next or previous week or month. The week glides there; the month slides in. */
 function step(n) {
+  const body = $('.wk-body');
+  if (state.view === 'week' && body) {
+    const day = state.weekDay ? state.weekDay.day : weekStart(state.anchor);
+    // Land on the Monday (on a phone the same weekday) of the week before or after.
+    const target = narrow.matches ? addDays(day, 7 * n) : addDays(weekStart(day), 7 * n);
+    const col = body.querySelector(`.wk-col[data-day="${target}"]`);
+    if (col) {
+      body.scrollTo({ left: col.offsetLeft - body.querySelector('.wk-grid > .gutter').offsetWidth, behavior: 'smooth' });
+      return;
+    }
+    state.anchor = addDays(state.anchor, 7 * n);
+    return show();
+  }
   state.anchor = state.view === 'week' ? addDays(state.anchor, 7 * n) : addMonths(state.anchor, n);
+  state.slide = n;
   show();
 }
 
@@ -970,11 +988,11 @@ function init() {
     if (cell && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openDay(cell.dataset.day); }
   });
 
-  // Swipe left or right to move a week or a month. On a phone the week view scrolls on its own instead.
+  // Swipe left or right to move a month. The week view scrolls on its own instead.
   let touch = null;
   $('#main').addEventListener('touchstart', (e) => { touch = e.touches.length === 1 ? [e.touches[0].clientX, e.touches[0].clientY] : null; }, { passive: true });
   $('#main').addEventListener('touchend', (e) => {
-    if (!touch || !state.data || (state.view === 'week' && narrow.matches)) return;
+    if (!touch || !state.data || state.view === 'week') return;
     const dx = e.changedTouches[0].clientX - touch[0];
     const dy = e.changedTouches[0].clientY - touch[1];
     touch = null;
