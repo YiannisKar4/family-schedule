@@ -510,6 +510,12 @@ textarea.field { resize: vertical; min-height: 44px; }
 .manage-row.hidden-cat .field { color: var(--text-muted); text-decoration: line-through; }
 .manage-row .icon-btn:disabled { opacity: 0.3; cursor: default; }
 .swatch { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--surface-2); box-shadow: 0 0 0 1px var(--border); cursor: pointer; }
+.palette { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 10px; padding: 6px 2px 4px; }
+.palette[hidden] { display: none; }
+.palette button {
+  width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--surface-2); box-shadow: 0 0 0 1px var(--border); cursor: pointer; padding: 0;
+}
+.palette button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--text-primary); }
 .manage-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; margin-top: 10px; }
 .manage-add .field { padding: 8px 10px; }
 #settings-body.busy { opacity: 0.6; pointer-events: none; }

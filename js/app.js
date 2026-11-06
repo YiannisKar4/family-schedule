@@ -1,12 +1,12 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=6';
-import * as api from './api.js?v=6';
-import { ApiError } from './api.js?v=6';
-import { STORAGE_PREFIX } from './config.js?v=6';
+import * as supa from './supa.js?v=7';
+import * as api from './api.js?v=7';
+import { ApiError } from './api.js?v=7';
+import { STORAGE_PREFIX } from './config.js?v=7';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=6';
+} from './dates.js?v=7';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -505,6 +505,8 @@ function renderSettings() {
         ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.1A10 10 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3.2 4M6.6 6.6C3.9 8.4 2 12 2 12s4 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/></svg>'
         : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>'}</button>
       <button type="button" class="icon-btn" data-act="up" aria-label="Πάνω" ${i === 0 ? 'disabled' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 15 6-6 6 6"/></svg></button>
+      <div class="palette" hidden>${PALETTE.map((c) => `<button type="button" data-act="pick" data-color="${c}" style="background:${c}"
+        aria-label="Χρώμα ${c}" aria-pressed="${c === x.color}"></button>`).join('')}</div>
     </div>`;
   $('#member-list').innerHTML = state.data.members.map((x, i, l) => row('members', x, i, l)).join('') || '<p class="small muted">Κανένα μέλος ακόμα.</p>';
   $('#cat-list').innerHTML = state.data.categories.map((x, i, l) => row('categories', x, i, l)).join('');
@@ -591,8 +593,14 @@ function initSettings() {
           if (v === 'remove') settingsCall(() => api.memberPhoto(x.id, null), 'Η φωτογραφία αφαιρέθηκε');
         });
     } else if (b.dataset.act === 'color') {
-      const next = PALETTE[(PALETTE.indexOf(x.color) + 1) % PALETTE.length];
-      settingsCall(() => save(kind, { ...x, color: next }));
+      // Opens this row's colours and closes any other.
+      const pal = $('.palette', row);
+      const open = pal.hidden;
+      $('#settings-body').querySelectorAll('.palette').forEach((p) => { p.hidden = true; });
+      pal.hidden = !open;
+    } else if (b.dataset.act === 'pick') {
+      if (b.dataset.color === x.color) { $('.palette', row).hidden = true; return; }
+      settingsCall(() => save(kind, { ...x, color: b.dataset.color }));
     } else if (b.dataset.act === 'hide') {
       settingsCall(() => save(kind, { ...x, hidden: !x.hidden }), x.hidden ? 'Εμφανίζεται ξανά' : 'Κρύφτηκε από τις νέες καταχωρήσεις');
     } else if (b.dataset.act === 'up') {
