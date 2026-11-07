@@ -1,8 +1,8 @@
 // Live updates. The page keeps one connection open to Supabase Realtime, and the database tells it
 // when someone changes an activity, a member or a category. Only then does the page load the data again.
 // Supabase's Realtime protocol (Phoenix channels) is spoken directly, so no extra library is needed.
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js?v=39';
-import * as supa from './supa.js?v=39';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js?v=40';
+import * as supa from './supa.js?v=40';
 
 const TABLES = ['sched_events', 'sched_skips', 'sched_members', 'sched_categories'];
 const TOPIC = 'realtime:schedule';
