@@ -1,19 +1,25 @@
 /* Family schedule. The base (colours, header, tabs, buttons, dialogs, toast) is the budget site's, so both look alike. */
 :root {
   color-scheme: light;
-  --page: #f6f6f3;
-  --surface-1: #fcfcfb;
+  /* Light: pastel rainbow on a warm cream base. */
+  --page: #fdf8ef;
+  --surface-1: #fffdf8;
   --surface-2: #ffffff;
-  --surface-sunk: #efeee9;
+  --surface-sunk: #f5eddd;
   --text-primary: #0b0b0b;
-  --text-secondary: #52514e;
-  --text-muted: #898781;
-  --grid: #e9e8e2;
-  --axis: #c3c2b7;
-  --border: rgba(11, 11, 11, 0.1);
-  --accent: #2a78d6;
+  --text-secondary: #5c5446;
+  --text-muted: #938a7a;
+  --grid: #f0e7d6;
+  --axis: #dccaae;
+  --border: rgba(120, 90, 40, 0.13);
+  --accent: #4f8fe6;
   --accent-ink: #ffffff;
-  --accent-soft: #e6f0fc;
+  --accent-soft: #e2edfc;
+  --topbar-bg: linear-gradient(90deg, #ffd9e5, #fff0c4 35%, #d4f1e2 68%, #d6e6fc);
+  --tabs-bg: linear-gradient(90deg, #fff0f4, #fffae6 35%, #ecf9f2 68%, #eef4fe);
+  --mo-head-bg: color-mix(in srgb, var(--accent) 12%, var(--surface-1));
+  --mo-head-ink: var(--text-secondary);
+  --mo-we-bg: color-mix(in srgb, var(--series-7) 7%, var(--surface-1));
   --plan-fill: #d9d8d1;
   --tooltip-bg: #1f1f1d;
   --tooltip-ink: #f0efec;
@@ -24,7 +30,7 @@
   --series-4: #eda100;
   --series-5: #e87ba4;
   --series-6: #008300;
-  --series-7: #6250d6;
+  --series-7: #e5739c;
   --series-8: #e34948;
 
   --good: #0ca30c;
@@ -67,6 +73,11 @@
     --series-5: #d55181;
     --series-6: #008300;
     --series-7: #9085e9;
+    --topbar-bg: color-mix(in srgb, var(--page) 88%, transparent);
+    --tabs-bg: var(--surface-2);
+    --mo-head-bg: transparent;
+    --mo-head-ink: var(--text-muted);
+    --mo-we-bg: transparent;
     --series-8: #e66767;
     --good-ink: #3ec43e;
     --warning-ink: #fab219;
@@ -101,6 +112,11 @@
   --series-5: #d55181;
   --series-6: #008300;
   --series-7: #9085e9;
+  --topbar-bg: color-mix(in srgb, var(--page) 88%, transparent);
+  --tabs-bg: var(--surface-2);
+  --mo-head-bg: transparent;
+  --mo-head-ink: var(--text-muted);
+  --mo-we-bg: transparent;
   --series-8: #e66767;
   --good-ink: #3ec43e;
   --warning-ink: #fab219;
@@ -131,7 +147,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* ---------- header ---------- */
 .topbar {
   position: sticky; top: 0; z-index: 20;
-  background: color-mix(in srgb, var(--page) 88%, transparent);
+  background: var(--topbar-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
@@ -168,7 +184,7 @@ select { color-scheme: inherit; }
 .tabs {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
   display: flex; justify-content: center; gap: 4px;
-  background: var(--surface-2); border-top: 1px solid var(--border);
+  background: var(--tabs-bg); border-top: 1px solid var(--border);
   padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
 }
 .tab {
@@ -569,12 +585,14 @@ main { padding-top: 12px; }
 /* ---------- month ---------- */
 .month { padding: 0; overflow: hidden; }
 .mo-head, .mo-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
-.mo-head div { text-align: center; font-size: 12px; color: var(--text-muted); font-weight: 600; padding: 8px 0; border-bottom: 1px solid var(--axis); }
+.mo-head { background: var(--mo-head-bg); }
+.mo-head div { text-align: center; font-size: 12px; color: var(--mo-head-ink); font-weight: 600; padding: 8px 0; border-bottom: 1px solid var(--axis); }
 .mo-cell {
   min-height: 104px; padding: 3px; display: flex; flex-direction: column; gap: 2px; min-width: 0; cursor: pointer;
   border-left: 1px solid var(--grid); border-top: 1px solid var(--grid);
 }
 .mo-cell:nth-child(7n + 1) { border-left: 0; }
+.mo-cell:where(:nth-child(7n + 6), :nth-child(7n)) { background: var(--mo-we-bg); }
 .mo-cell:hover { background: var(--surface-sunk); }
 .mo-cell:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .mo-cell.out { background: color-mix(in srgb, var(--surface-sunk) 60%, transparent); }

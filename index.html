@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex, nofollow">
-  <meta name="theme-color" content="#fcfcfb">
+  <meta name="theme-color" content="#fffdf8">
   <title>Family Schedule</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -20,14 +20,14 @@
     (function () {
       var root = document.documentElement, meta = document.querySelector('meta[name="theme-color"]');
       var dark = matchMedia('(prefers-color-scheme: dark)');
-      function paint() { meta.content = (root.dataset.theme || (dark.matches ? 'dark' : 'light')) === 'dark' ? '#1a1a19' : '#fcfcfb'; }
+      function paint() { meta.content = (root.dataset.theme || (dark.matches ? 'dark' : 'light')) === 'dark' ? '#1a1a19' : '#fffdf8'; }
       paint();
       dark.addEventListener('change', paint);
       new MutationObserver(paint).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
     })();
   </script>
-  <link rel="stylesheet" href="css/style.css?v=39">
-  <script type="module" src="js/app.js?v=39"></script>
+  <link rel="stylesheet" href="css/style.css?v=40">
+  <script type="module" src="js/app.js?v=40"></script>
   <script>if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>
 </head>
 <body>
