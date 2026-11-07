@@ -1,15 +1,15 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=38';
-import * as api from './api.js?v=38';
-import * as live from './live.js?v=38';
-import { ApiError } from './api.js?v=38';
-import { STORAGE_PREFIX } from './config.js?v=38';
-import { attachPlaces, attachSuggest } from './places.js?v=38';
-import { attachPicker, closePicker, closeOnOutside } from './pickers.js?v=38';
+import * as supa from './supa.js?v=39';
+import * as api from './api.js?v=39';
+import * as live from './live.js?v=39';
+import { ApiError } from './api.js?v=39';
+import { STORAGE_PREFIX } from './config.js?v=39';
+import { attachPlaces, attachSuggest } from './places.js?v=39';
+import { attachPicker, closePicker, closeOnOutside } from './pickers.js?v=39';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=38';
+} from './dates.js?v=39';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -1263,6 +1263,30 @@ function trackVisibleArea() {
   vv.addEventListener('scroll', update);
   addEventListener('resize', keepFocusVisible);
   update();
+
+  // Android: while a window is open, the keyboard slides over the page instead of the app being
+  // cut shorter in one step (which was abrupt and flashed). The window rises with it (--kb in
+  // style.css), then the field being typed in is brought into view.
+  const vk = navigator.virtualKeyboard;
+  if (!vk || !matchMedia('(pointer: coarse)').matches) return;
+  document.documentElement.classList.add('vk');
+  const reveal = () => {
+    const f = document.activeElement;
+    if (f && f.matches('input, textarea') && f.closest('dialog[open]')) f.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  };
+  const sync = () => {
+    const open = !!document.querySelector('dialog[open]');
+    if (vk.overlaysContent !== open) vk.overlaysContent = open;
+    if (!open) root.removeProperty('--kb');
+  };
+  new MutationObserver(sync).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['open'] });
+  vk.addEventListener('geometrychange', () => {
+    const h = Math.round(vk.boundingRect.height);
+    if (h) root.setProperty('--kb', `${h}px`); else root.removeProperty('--kb');
+    if (h) setTimeout(reveal, 300);
+  });
+  // Moving to another field while the keyboard is up.
+  document.addEventListener('focusin', () => { if (root.getPropertyValue('--kb')) setTimeout(reveal, 50); });
 }
 
 trackVisibleArea();
