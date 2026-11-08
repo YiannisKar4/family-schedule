@@ -82,6 +82,12 @@ pg_cron, every minute ──► Edge Function sched-push ──► sched_push_du
 - `sched_push_config` holds the cron secret (made by `schema.sql`) and the VAPID keys (made by the
   function on its first run). Only `service_role` reads it.
 - Times are Greek time (`Europe/Athens`). All-day activities have no reminder.
+- Each notification is about one person (`_sched_push_who`): a child on the activity first (one of them at
+  random when two), otherwise the person on it (one at random when more). Nobody or the whole family: the logo.
+  Children are `sched_members.child` (Πάνος and Νικόλας are set when the column is created; change with SQL).
+  On Android the picture is their photo in a ring of their colour, or their initial on their colour
+  (`sw.js` draws it; the app copies photos to the `schedule-photos` cache for it). iPhone always shows the
+  app icon, so there the title starts with the nearest coloured circle emoji (🔴🟠🟡🟢🔵🟣🟤⚫⚪).
 - [`supabase/functions/sched-push/index.ts`](supabase/functions/sched-push/index.ts) is one file using only
   Web Crypto. `npm run test:push` checks its encryption against an independent implementation.
 

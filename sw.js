@@ -34,17 +34,70 @@ self.addEventListener('fetch', (e) => {
 });
 
 // Push notifications (reminders, changes by others). The Edge Function sends
-// { title, body, date, tag }; tapping one opens the app on that day's week.
+// { title, body, date, tag, who }; tapping one opens the app on that day's week.
+// who is the person the notification is about (null: the app's logo). On Android its picture
+// is their photo, or their initial on their colour. iPhone always shows the app's icon there,
+// so the title starts with the coloured circle emoji closest to their colour instead.
+const PHOTOS = 'schedule-photos'; // the app keeps each member's photo here, as photos/<id>
+const apple = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent) && !/Chrome|Android|Edg/.test(navigator.userAgent);
+
+const EMOJI = [['🔴', '#dd2e44'], ['🟠', '#f4900c'], ['🟡', '#fdcb58'], ['🟢', '#78b159'], ['🔵', '#55acee'],
+  ['🟣', '#aa8ed6'], ['🟤', '#c1694f'], ['⚫', '#31373d'], ['⚪', '#e6e7e8']];
+const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+function emoji(hex) {
+  const c = rgb(hex);
+  const dist = (e) => rgb(e[1]).reduce((sum, v, i) => sum + (v - c[i]) ** 2, 0);
+  return EMOJI.reduce((best, e) => (dist(e) < dist(best) ? e : best))[0];
+}
+
+/** A round picture of the person, as a data URL; null when it cannot be drawn (the logo is used). */
+async function picture(who) {
+  if (typeof OffscreenCanvas === 'undefined') return null;
+  const size = 192;
+  const canvas = new OffscreenCanvas(size, size);
+  const g = canvas.getContext('2d');
+  g.beginPath(); g.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2); g.fillStyle = who.color; g.fill();
+  let photo = null;
+  if (who.photo) {
+    const hit = await (await caches.open(PHOTOS)).match(`photos/${who.id}`);
+    if (hit) photo = await createImageBitmap(await hit.blob()).catch(() => null);
+  }
+  if (photo) {
+    // The photo inside a ring of the person's colour, as on the calendar.
+    const r = size / 2 - 10;
+    g.save(); g.beginPath(); g.arc(size / 2, size / 2, r, 0, Math.PI * 2); g.clip();
+    g.drawImage(photo, size / 2 - r, size / 2 - r, r * 2, r * 2);
+    g.restore();
+  } else {
+    g.fillStyle = '#fff'; g.font = '600 96px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText((who.name || '?').charAt(0).toUpperCase(), size / 2, size / 2 + 6);
+  }
+  const bytes = new Uint8Array(await (await canvas.convertToBlob({ type: 'image/png' })).arrayBuffer());
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return `data:image/png;base64,${btoa(bin)}`;
+}
+
+async function notify(m) {
+  let title = m.title || 'Πρόγραμμα';
+  let icon = 'icons/icon-192.png';
+  if (m.who && /^#[0-9a-f]{6}$/i.test(m.who.color || '')) {
+    if (apple) title = `${emoji(m.who.color)} ${title}`;
+    else icon = (await picture(m.who).catch(() => null)) || icon;
+  }
+  return self.registration.showNotification(title, {
+    body: m.body || '',
+    tag: m.tag,
+    icon,
+    badge: 'icons/badge-96.png',
+    data: { date: m.date },
+  });
+}
+
 self.addEventListener('push', (e) => {
   let m = {};
   try { m = e.data ? e.data.json() : {}; } catch { m = { title: e.data && e.data.text() }; }
-  e.waitUntil(self.registration.showNotification(m.title || 'Πρόγραμμα', {
-    body: m.body || '',
-    tag: m.tag,
-    icon: 'icons/icon-192.png',
-    badge: 'icons/badge-96.png',
-    data: { date: m.date },
-  }));
+  e.waitUntil(notify(m));
 });
 
 self.addEventListener('notificationclick', (e) => {

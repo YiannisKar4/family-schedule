@@ -1,6 +1,6 @@
 // Push notifications on this device: signing up with the browser's push service, and this
 // device's choices, kept in the database (sched_push_subs). The Edge Function sends them.
-import * as api from './api.js?v=42';
+import * as api from './api.js?v=43';
 
 const ios = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const installed = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;

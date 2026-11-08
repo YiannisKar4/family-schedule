@@ -1,16 +1,16 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=42';
-import * as api from './api.js?v=42';
-import * as live from './live.js?v=42';
-import * as push from './push.js?v=42';
-import { ApiError } from './api.js?v=42';
-import { STORAGE_PREFIX } from './config.js?v=42';
-import { attachPlaces, attachSuggest } from './places.js?v=42';
-import { attachPicker, closePicker, closeOnOutside } from './pickers.js?v=42';
+import * as supa from './supa.js?v=43';
+import * as api from './api.js?v=43';
+import * as live from './live.js?v=43';
+import * as push from './push.js?v=43';
+import { ApiError } from './api.js?v=43';
+import { STORAGE_PREFIX } from './config.js?v=43';
+import { attachPlaces, attachSuggest } from './places.js?v=43';
+import { attachPicker, closePicker, closeOnOutside } from './pickers.js?v=43';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=42';
+} from './dates.js?v=43';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -120,6 +120,7 @@ async function fetchData({ quiet = false } = {}) {
     state.lastFetch = Date.now();
     saveJson(CACHE_KEY, state.data);
     render();
+    keepPhotos(body.members);
   } catch (err) {
     if (handleAuthError(err)) return;
     if (!quiet || !state.data) toast(err.message, true);
@@ -129,6 +130,24 @@ async function fetchData({ quiet = false } = {}) {
     $('#refresh').classList.remove('spin');
     if (state.again) { state.again = false; fetchData({ quiet: true }); }
   }
+}
+
+/**
+ * Copies the members' photos where the service worker can read them (it has no sign-in), so a
+ * notification on Android can show the person's photo. Only when they changed.
+ */
+let photosKept = '';
+async function keepPhotos(members) {
+  const sig = members.map((m) => `${m.id}:${m.photo ? m.photo.length + m.photo.slice(-24) : ''}`).join('|');
+  if (sig === photosKept || !('caches' in window)) return;
+  try {
+    const cache = await caches.open('schedule-photos');
+    for (const m of members) {
+      if (m.photo) await cache.put(`photos/${m.id}`, await fetch(m.photo));
+      else await cache.delete(`photos/${m.id}`);
+    }
+    photosKept = sig;
+  } catch { /* private mode or no storage: notifications use the initial */ }
 }
 
 /** Shows the new dates, and loads more when they are outside what is loaded. */
@@ -957,6 +976,8 @@ function initSettings() {
     $('#settings-dlg').close();
     live.stop();
     await push.disable().catch(() => {});
+    photosKept = '';
+    await caches?.delete('schedule-photos').catch(() => {});
     await supa.signOut();
     forgetData();
     render();
