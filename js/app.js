@@ -1,15 +1,16 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=41';
-import * as api from './api.js?v=41';
-import * as live from './live.js?v=41';
-import { ApiError } from './api.js?v=41';
-import { STORAGE_PREFIX } from './config.js?v=41';
-import { attachPlaces, attachSuggest } from './places.js?v=41';
-import { attachPicker, closePicker, closeOnOutside } from './pickers.js?v=41';
+import * as supa from './supa.js?v=42';
+import * as api from './api.js?v=42';
+import * as live from './live.js?v=42';
+import * as push from './push.js?v=42';
+import { ApiError } from './api.js?v=42';
+import { STORAGE_PREFIX } from './config.js?v=42';
+import { attachPlaces, attachSuggest } from './places.js?v=42';
+import { attachPicker, closePicker, closeOnOutside } from './pickers.js?v=42';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=41';
+} from './dates.js?v=42';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -791,7 +792,80 @@ function renderThemeSeg() {
   document.querySelectorAll('#theme-seg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.themeOpt === t)));
 }
 
+/* ------------------------------------------------- push notifications */
+
+const REMIND = [[null, 'Όχι'], [10, '10΄'], [15, '15΄'], [30, '30΄'], [60, '1 ώρα'], [120, '2 ώρες']];
+
+/** The Ειδοποιήσεις part of Settings, for this device. */
+async function renderPush() {
+  const box = $('#push-box');
+  const run = ++pushRun;
+  const say = (html) => { if (run === pushRun) box.innerHTML = html; };
+  let st;
+  let c = null;
+  try {
+    st = await push.status();
+    if (st === 'on') c = await push.choices();
+  } catch (x) {
+    if (handleAuthError(x)) return;
+    return say(`<div class="err">${esc(x.message)}</div>`);
+  }
+  if (st === 'ios-browser') return say('<p class="small muted">Στο iPhone οι ειδοποιήσεις δουλεύουν μόνο στην εφαρμογή της οθόνης Αφετηρίας: άνοιξε τη σελίδα στο Safari, Κοινή χρήση → Προσθήκη στην οθόνη Αφετηρίας, και άνοιξέ την από εκεί.</p>');
+  if (st === 'unsupported') return say('<p class="small muted">Αυτός ο browser δεν υποστηρίζει ειδοποιήσεις.</p>');
+  if (st === 'denied') return say('<p class="small muted">Οι ειδοποιήσεις είναι μπλοκαρισμένες για την εφαρμογή. Άνοιξέ τες από τις ρυθμίσεις του κινητού (Εφαρμογές → Family Schedule → Ειδοποιήσεις) και άνοιξε ξανά τις Ρυθμίσεις.</p>');
+  if (!c) return say('<p class="small muted">Κλειστές σε αυτή τη συσκευή.</p><button type="button" class="btn primary" data-push="on">Ενεργοποίηση</button>');
+  const members = state.data.members.filter((m) => !m.hidden || c.members.includes(m.id));
+  say(`
+    <p class="small muted push-label">Υπενθύμιση πριν από κάθε δραστηριότητα με ώρα</p>
+    <div class="seg" role="group" aria-label="Υπενθύμιση">${REMIND.map(([v, l]) =>
+      `<button type="button" data-push="remind" data-v="${v ?? ''}" aria-pressed="${c.remindMinutes === v}">${l}</button>`).join('')}</div>
+    <p class="small muted push-label">Για ποιους <span class="push-hint">(κανένας: για όλους· οι οικογενειακές έρχονται πάντα)</span></p>
+    <div class="chip-row">${members.map((m) =>
+      `<button type="button" class="pick" data-push="member" data-v="${m.id}" aria-pressed="${c.members.includes(m.id)}" style="--c:${m.color}"><i class="dot" style="background:${m.color}"></i>${esc(m.name)}</button>`).join('')}</div>
+    <label class="check"><input type="checkbox" data-push="changes" ${c.changes ? 'checked' : ''}> Όταν κάποιος άλλος προσθέτει, αλλάζει ή σβήνει κάτι</label>
+    <button type="button" class="btn push-off" data-push="off">Απενεργοποίηση σε αυτή τη συσκευή</button>`);
+}
+let pushRun = 0;
+
+async function pushCall(fn, okMsg) {
+  const box = $('#push-box');
+  const err = $('#settings-err');
+  err.hidden = true;
+  box.classList.add('busy');
+  try {
+    await fn();
+    if (okMsg) toast(okMsg);
+  } catch (x) {
+    if (handleAuthError(x)) return;
+    err.textContent = x.message;
+    err.hidden = false;
+  } finally {
+    box.classList.remove('busy');
+    await renderPush();
+  }
+}
+
+function initPush() {
+  $('#push-box').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-push]');
+    if (!b) return;
+    const act = b.dataset.push;
+    if (act === 'on') pushCall(() => push.enable(), 'Οι ειδοποιήσεις άνοιξαν');
+    else if (act === 'off') pushCall(() => push.disable(), 'Οι ειδοποιήσεις έκλεισαν');
+    else if (act === 'remind') pushCall(() => push.save({ remindMinutes: b.dataset.v ? Number(b.dataset.v) : null }));
+    else if (act === 'member') {
+      b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
+      const ids = [...$('#push-box').querySelectorAll('[data-push="member"][aria-pressed="true"]')].map((x) => Number(x.dataset.v));
+      pushCall(() => push.save({ members: ids }));
+    }
+  });
+  $('#push-box').addEventListener('change', (e) => {
+    if (e.target.dataset.push === 'changes') pushCall(() => push.save({ changes: e.target.checked }));
+  });
+}
+
 function initSettings() {
+  initPush();
   renderThemeSeg();
   $('#theme-seg').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-theme-opt]');
@@ -802,6 +876,7 @@ function initSettings() {
     renderSettings();
     $('#settings-err').hidden = true;
     $('#settings-dlg').showModal();
+    renderPush();
   });
   const save = (kind, x) => (kind === 'members' ? api.saveMember(x) : api.saveCategory(x));
   const list = (kind) => (kind === 'members' ? state.data.members : state.data.categories);
@@ -881,6 +956,7 @@ function initSettings() {
     if (!ok) return;
     $('#settings-dlg').close();
     live.stop();
+    await push.disable().catch(() => {});
     await supa.signOut();
     forgetData();
     render();
@@ -1032,6 +1108,17 @@ function init() {
     toast(e.message, true);
   }
   if (supa.signedIn()) state.data = loadJson(CACHE_KEY, null);
+  // Opened from a notification: show that day's week.
+  const fromPush = new URLSearchParams(location.search).get('d');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(fromPush || '')) { state.view = 'week'; state.anchor = fromPush; }
+  if (location.search) history.replaceState(null, '', `${location.pathname}#${state.view}`);
+  // A notification tapped while the app is open.
+  navigator.serviceWorker?.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'open-day' && /^\d{4}-\d{2}-\d{2}$/.test(e.data.date || '')) {
+      document.querySelectorAll('dialog[open]').forEach((d) => d.close());
+      setView('week', e.data.date);
+    }
+  });
 
   document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => setView(t.dataset.view)));
   window.addEventListener('hashchange', () => { if (VIEWS.includes(location.hash.slice(1))) setView(location.hash.slice(1)); });
@@ -1198,6 +1285,7 @@ function init() {
   if (supa.signedIn()) {
     fetchData({ quiet: !!state.data });
     startLive();
+    push.sync();
   }
 }
 

@@ -9,7 +9,7 @@ const root = new URL('..', import.meta.url).pathname;
 const db = new PGlite();
 
 await db.exec(`
-  create role anon nologin; create role authenticated nologin;
+  create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
   create schema auth;
   create function auth.jwt() returns jsonb language sql stable as
     $$ select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $$;
@@ -36,10 +36,14 @@ await db.exec(`
                                     ('other@example.com', '00000000-0000-4000-8000-000000000002');
 `);
 
+// Who is signed in: the email, and the user id (every email is the same user unless SUB is changed).
+let SUB = '11111111-1111-4111-8111-111111111111';
 async function as(who, sql, params = []) {
   return db.transaction(async (tx) => {
-    if (who) {
-      await tx.query(`select set_config('request.jwt.claims', $1, true)`, [JSON.stringify({ sub: '11111111-1111-4111-8111-111111111111', email: who })]);
+    if (who === 'service_role') {
+      await tx.exec('set local role service_role');
+    } else if (who) {
+      await tx.query(`select set_config('request.jwt.claims', $1, true)`, [JSON.stringify({ sub: SUB, email: who })]);
       await tx.exec('set local role authenticated');
     } else {
       await tx.exec('set local role anon');
@@ -215,6 +219,98 @@ ok('security: household only, strangers and visitors get nothing');
 const pub = (await db.query(`select tablename from pg_publication_tables where pubname = 'supabase_realtime' order by 1`)).rows.map((r) => r.tablename);
 assert.deepEqual(pub, ['sched_categories', 'sched_events', 'sched_members', 'sched_skips']);
 ok('live updates: the schedule tables are in the Realtime publication');
+
+
+// ---- push notifications
+const SVC = 'service_role';
+const U1 = '11111111-1111-4111-8111-111111111111';
+const U2 = '22222222-2222-4222-8222-222222222222';
+const asUser = async (sub, fn) => { const keep = SUB; SUB = sub; try { return await fn(); } finally { SUB = keep; } };
+const due = async (at) => (await as(SVC, 'select sched_push_due($1) as r', [at])).rows[0].r;
+const devA = { endpoint: 'https://push.example/a', p256dh: 'pa', auth: 'aa' };
+const devB = { endpoint: 'https://push.example/b', p256dh: 'pb', auth: 'ab' };
+
+assert.equal((await rpc(A, 'api_sched_push_key')).key, null);
+const cfg = (await as(SVC, `select sched_push_set_keys('PUB', '{"k":1}') as r`)).rows[0].r;
+assert.equal(cfg.vapidPublic, 'PUB');
+assert.ok(cfg.cronSecret.length >= 32);
+await as(SVC, `select sched_push_set_keys('OTHER', '{}')`);
+assert.equal((await rpc(A, 'api_sched_push_key')).key, 'PUB');
+ok('push: keys are made once and the public one reaches signed-in users');
+
+await rejects(rpc(A, 'api_sched_push_save', [{ ...devA, members: [9999] }]), /Άγνωστο μέλος/, 'unknown member');
+await rejects(rpc(A, 'api_sched_push_save', [{ endpoint: 'http://x', p256dh: 'p', auth: 'a' }]), /Μη έγκυρη/, 'bad endpoint');
+await asUser(U1, () => rpc(A, 'api_sched_push_save', [devA]));
+assert.deepEqual(await rpc(A, 'api_sched_push_get', [devA.endpoint]), { remindMinutes: 30, members: [], changes: true });
+await asUser(U1, () => rpc(A, 'api_sched_push_save', [{ ...devA, members: [m2] }]));
+await asUser(U1, () => rpc(A, 'api_sched_push_save', [devA])); // a key refresh keeps the choices
+assert.deepEqual(await rpc(A, 'api_sched_push_get', [devA.endpoint]), { remindMinutes: 30, members: [m2], changes: true });
+await asUser(U2, () => rpc('b@example.com', 'api_sched_push_save', [{ ...devB, remindMinutes: null }]));
+assert.deepEqual(await rpc(A, 'api_sched_push_get', [devB.endpoint]), { remindMinutes: null, members: [], changes: true });
+assert.equal(await rpc('other@example.com', 'api_sched_push_get', [devA.endpoint]), null);
+ok('push: a device signs up with defaults, keeps its choices, other households cannot see it');
+
+await due('2026-11-01 08:00+02'); // clears what the tests above queued
+const ev = (x) => asUser(U1, async () => (await rpc(A, 'api_sched_add', [x])).id);
+const kid = await ev({ title: 'Λογοθεραπεία', members: [m2], date: '2026-11-10', start: '17:00', end: '17:45', location: 'Κέντρο' });
+const dad = await ev({ title: 'Δουλειά', members: [m1], date: '2026-11-10', start: '17:00', end: '18:00' });
+const fam = await ev({ title: 'Τραπέζι', date: '2026-11-10', start: '17:10', end: '19:00' });
+let out = await due('2026-11-10 08:00+02');
+assert.ok(!out.some((m) => m.endpoint === devA.endpoint && m.tag.startsWith('c-')), 'not back to who made it');
+out = out.filter((m) => m.endpoint === devB.endpoint);
+assert.deepEqual(out.map((m) => m.title), ['Νέο: Λογοθεραπεία · Νίκος', 'Νέο: Δουλειά · Γιάννης', 'Νέο: Τραπέζι']);
+assert.equal(out[0].title, 'Νέο: Λογοθεραπεία · Νίκος');
+assert.equal(out[0].body, 'Τρίτη 10 Νοεμβρίου · 17:00–17:45 · Κέντρο');
+assert.equal(out[0].date, '2026-11-10');
+assert.deepEqual(await due('2026-11-10 08:00+02'), []);
+ok('push: an addition goes to the other users, not back to who made it');
+
+out = await due('2026-11-10 16:29+02');
+assert.deepEqual(out, [], 'too early');
+out = await due('2026-11-10 16:30:05+02');
+assert.deepEqual(out.map((m) => [m.endpoint, m.title, m.body]),
+  [[devA.endpoint, 'Λογοθεραπεία · Νίκος', 'Σε 30 λεπτά · 17:00–17:45 · Κέντρο']]);
+assert.deepEqual(await due('2026-11-10 16:31+02'), [], 'sent once');
+out = await due('2026-11-10 16:41+02');
+assert.deepEqual(out.map((m) => [m.title, m.body]), [['Τραπέζι', 'Σε 29 λεπτά · 17:10–19:00']], 'family events always');
+assert.deepEqual(await due('2026-11-10 17:05+02'), [], 'nothing after the start');
+ok('push: reminders before the start, once, only for the picked people and family ones');
+
+// A series every 2 weeks on Tue and Thu from Tue 3 Nov, skipping Thu 12 Nov; a cancelled one never reminds.
+await asUser(U1, () => rpc(A, 'api_sched_push_save', [{ ...devA, members: [], remindMinutes: 60, changes: false }]));
+const ser = await ev({ title: 'Ποδόσφαιρο', members: [m2], date: '2026-11-03', start: '18:00', end: '19:00', repeatDays: [2, 4], repeatEvery: 2 });
+await asUser(U1, () => rpc(A, 'api_sched_delete', [ser, 'one', '2026-11-19']));
+await ev({ title: 'Γιατρός', date: '2026-11-17', start: '18:00', end: '18:30', cancelled: true });
+await due('2026-11-01 08:00+02');
+const at = async (t) => (await due(t)).filter((m) => m.endpoint === devA.endpoint).map((m) => `${m.title}|${m.body}`);
+assert.deepEqual(await at('2026-11-05 17:00+02'), ['Ποδόσφαιρο · Νίκος|Σε 1 ώρα · 18:00–19:00']);
+assert.deepEqual(await at('2026-11-10 17:00+02'), [], 'off week');
+assert.deepEqual(await at('2026-11-17 17:00+02'), ['Ποδόσφαιρο · Νίκος|Σε 1 ώρα · 18:00–19:00'], 'on week; cancelled one silent');
+assert.deepEqual(await at('2026-11-19 17:00+02'), [], 'skipped date');
+ok('push: weekly series (every 2 weeks, skips) and cancelled activities');
+
+// Change texts
+await due('2026-11-01 08:00+02');
+await asUser(U1, () => rpc(A, 'api_sched_update', [kid, { title: 'Λογοθεραπεία', members: [m2], date: '2026-11-10', start: '17:00', end: '17:45', cancelled: true }]));
+await asUser(U1, () => rpc(A, 'api_sched_update', [ser, { title: 'Ποδόσφαιρο', members: [m2], date: '2026-11-03', start: '18:30', end: '19:30', repeatDays: [2, 4], repeatEvery: 2 }, 'following', '2026-11-17']));
+await asUser(U1, () => rpc(A, 'api_sched_delete', [dad]));
+out = (await due('2026-11-01 08:00+02')).filter((m) => m.endpoint === devB.endpoint).map((m) => `${m.title}|${m.body}`);
+assert.deepEqual(out, [
+  'Ακυρώθηκε: Λογοθεραπεία · Νίκος|Τρίτη 10 Νοεμβρίου · 17:00–17:45',
+  'Αλλαγή: Ποδόσφαιρο · Νίκος|Από Τρίτη 17 Νοεμβρίου, κάθε 2 εβδομάδες: Τρι, Πεμ · 18:30–19:30',
+  'Διαγραφή: Δουλειά · Γιάννης|Τρίτη 10 Νοεμβρίου · 17:00–18:00',
+]);
+ok('push: change, cancel and delete texts');
+
+await as(SVC, 'select sched_push_gone($1)', [[devB.endpoint]]);
+assert.equal(await rpc(A, 'api_sched_push_get', [devB.endpoint]), null);
+await rpc(A, 'api_sched_push_remove', [devA.endpoint]);
+assert.equal(await rpc(A, 'api_sched_push_get', [devA.endpoint]), null);
+await rejects(rpc(A, 'sched_push_due'), /permission denied/, 'users cannot run the sender');
+await rejects(rpc(A, 'sched_push_config_get'), /permission denied/, 'users cannot read the secrets');
+await rejects(as(A, 'select * from sched_push_subs'), /permission denied/, 'no direct table access');
+await rejects(rpc(null, 'api_sched_push_key'), /permission denied/, 'anon');
+ok('push: devices removed, sender and secrets closed to users');
 
 if (budget) {
   const r = await rpc(A, 'api_read');

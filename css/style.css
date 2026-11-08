@@ -689,6 +689,15 @@ textarea.field { resize: vertical; min-height: 44px; }
 .manage-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; margin-top: 10px; }
 .manage-add .field { padding: 8px 10px; }
 #settings-body.busy { opacity: 0.6; pointer-events: none; }
+.push-box.busy { opacity: 0.6; pointer-events: none; }
+.push-box > p { margin: 4px 0 8px; }
+.push-box .push-label { margin: 12px 0 6px; }
+.push-box .push-label:first-child { margin-top: 4px; }
+.push-hint { font-size: 12px; }
+.push-box .push-off { margin-top: 14px; }
+.push-box .seg { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.push-box .seg button { white-space: nowrap; padding-inline: 4px; }
+@media (max-width: 520px) { .push-box .seg { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
 /* iPhone zooms the page into any field under 16px when tapped, which cuts the window off. */
 @media (pointer: coarse) {

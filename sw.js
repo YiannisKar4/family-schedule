@@ -32,3 +32,31 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(fetch(req).then(save).catch(() => caches.match(req)));
   }
 });
+
+// Push notifications (reminders, changes by others). The Edge Function sends
+// { title, body, date, tag }; tapping one opens the app on that day's week.
+self.addEventListener('push', (e) => {
+  let m = {};
+  try { m = e.data ? e.data.json() : {}; } catch { m = { title: e.data && e.data.text() }; }
+  e.waitUntil(self.registration.showNotification(m.title || 'Πρόγραμμα', {
+    body: m.body || '',
+    tag: m.tag,
+    icon: 'icons/icon-192.png',
+    badge: 'icons/badge-96.png',
+    data: { date: m.date },
+  }));
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const date = e.notification.data && e.notification.data.date;
+  const url = new URL(date ? `./?d=${date}#week` : './#week', self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    const open = list.find((c) => c.url.startsWith(self.registration.scope));
+    if (open) {
+      open.postMessage({ type: 'open-day', date });
+      return open.focus();
+    }
+    return self.clients.openWindow(url);
+  }));
+});
