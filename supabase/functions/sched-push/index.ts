@@ -76,10 +76,12 @@ export async function vapidAuth(endpoint: string, publicKey: string, privateKey:
   return `vapid t=${head}.${claims}.${b64u(sig)}, k=${publicKey}`;
 }
 
-type Msg = { endpoint: string; p256dh: string; auth: string; title: string; body: string; date: string; tag: string };
+// who: whose picture and colour the phone shows ({ id, name, color, photo }), or null for the logo.
+type Who = { id: number; name: string; color: string; photo: boolean } | null;
+type Msg = { endpoint: string; p256dh: string; auth: string; title: string; body: string; date: string; tag: string; who: Who };
 
 export async function send(m: Msg, publicKey: string, privateKey: JsonWebKey): Promise<number> {
-  const payload = enc.encode(JSON.stringify({ title: m.title, body: m.body, date: m.date, tag: m.tag }));
+  const payload = enc.encode(JSON.stringify({ title: m.title, body: m.body, date: m.date, tag: m.tag, who: m.who }));
   const res = await fetch(m.endpoint, {
     method: 'POST',
     headers: {

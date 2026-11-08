@@ -57,7 +57,7 @@ const server = http.createServer(async (req, res) => {
     if (rpcName === 'sched_push_config_get') return json(cfg);
     if (rpcName === 'sched_push_set_keys') { cfg.vapidPublic = args.public_key; cfg.vapidPrivate = args.private_key; return json(cfg); }
     if (rpcName === 'sched_push_due') {
-      const to = (id) => ({ endpoint: `http://localhost:${server.address().port}/push/${id}`, p256dh, auth: b64u(auth), title: `T${id}`, body: 'B', date: '2026-11-10', tag: `t${id}` });
+      const to = (id) => ({ endpoint: `http://localhost:${server.address().port}/push/${id}`, p256dh, auth: b64u(auth), title: `T${id}`, body: 'B', date: '2026-11-10', tag: `t${id}`, who: { id: 3, name: 'Πάνος', color: '#1baf7a', photo: true } });
       return json([to('ok'), to('gone')]);
     }
     if (rpcName === 'sched_push_gone') { res.writeHead(204); return res.end(); }
@@ -84,7 +84,7 @@ assert.equal(got.headers['content-encoding'], 'aes128gcm');
 assert.equal(got.headers.ttl, '3600');
 assert.match(got.headers.authorization, new RegExp(`^vapid t=.+, k=${cfg.vapidPublic}$`));
 assert.deepEqual(JSON.parse(ece.decrypt(got.body, { version: 'aes128gcm', privateKey: ua, authSecret: auth }).toString()),
-  { title: 'Tok', body: 'B', date: '2026-11-10', tag: 'tok' });
+  { title: 'Tok', body: 'B', date: '2026-11-10', tag: 'tok', who: { id: 3, name: 'Πάνος', color: '#1baf7a', photo: true } });
 const keysBefore = cfg.vapidPublic;
 await handler(new Request('http://fn/', { method: 'POST', headers: { 'x-cron-secret': 'secret' } }));
 assert.equal(cfg.vapidPublic, keysBefore, 'keys kept on later runs');

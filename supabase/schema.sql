@@ -45,6 +45,17 @@ create table if not exists sched_members (
 alter table sched_members add column if not exists photo text
   check (photo is null or (photo ~ '^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$' and length(photo) <= 200000));
 
+-- Children come first when a notification picks whose picture and colour to show.
+-- Added with the push notifications; Πάνος and Νικόλας start as children.
+do $$
+begin
+  if not exists (select 1 from information_schema.columns
+                 where table_schema = 'public' and table_name = 'sched_members' and column_name = 'child') then
+    alter table sched_members add column child boolean not null default false;
+    update sched_members set child = true where name in ('Πάνος', 'Νικόλας');
+  end if;
+end $$;
+
 -- What kind of activity: Σχολείο, Δουλειά, Ποδόσφαιρο, Λογοθεραπεία, …
 create table if not exists sched_categories (
   id           smallint generated always as identity primary key,
@@ -275,6 +286,8 @@ create table if not exists sched_push_config (
   vapid_private jsonb
 );
 insert into sched_push_config default values on conflict do nothing;
+-- The activity's own people (member_ids also holds the people it had before a change).
+alter table sched_push_changes add column if not exists who smallint[] not null default '{}';
 
 alter table sched_push_subs    enable row level security;
 alter table sched_push_sent    enable row level security;
@@ -286,6 +299,20 @@ revoke all on sched_push_subs, sched_push_sent, sched_push_changes, sched_push_c
 create or replace function _sched_push_names(h uuid, ids smallint[]) returns text
 language sql stable set search_path = public as $$
   select string_agg(name, ', ' order by sort_order, id) from sched_members where household_id = h and id = any(ids)
+$$;
+
+-- Whose picture and colour a notification shows: { id, name, color, photo } (photo: true/false), or null for
+-- the app's logo. One child on it: that child; two or more: one of them at random. No child: the one
+-- person on it, or one of them at random. Nobody, or the whole family: the logo.
+create or replace function _sched_push_who(h uuid, ids smallint[]) returns json
+language sql volatile set search_path = public as $$
+  select case
+    when cardinality(ids) = 0 then null
+    when not exists (select 1 from sched_members where household_id = h and not archived and not (id = any(ids))) then null
+    else (select json_build_object('id', id, 'name', name, 'color', color, 'photo', photo is not null)
+          from sched_members where household_id = h and id = any(ids)
+          order by child desc, random() limit 1)
+  end
 $$;
 
 -- "Τρίτη 10 Νοεμβρίου"
@@ -327,8 +354,8 @@ language plpgsql security definer set search_path = public as $$
 declare h uuid := sched_household();
 begin
   if h is null or h <> e.household_id then return; end if;
-  insert into sched_push_changes (household_id, actor, member_ids, title, body, on_date)
-  values (h, auth.uid(), coalesce(members, '{}'),
+  insert into sched_push_changes (household_id, actor, member_ids, who, title, body, on_date)
+  values (h, auth.uid(), coalesce(members, '{}'), e.member_ids,
           case kind when 'add' then 'Νέο' when 'cancel' then 'Ακυρώθηκε' when 'delete' then 'Διαγραφή' else 'Αλλαγή' end
             || ': ' || e.title || coalesce(' · ' || _sched_push_names(h, e.member_ids), ''),
           what, greatest(e.start_date, (now() at time zone 'Europe/Athens')::date));
@@ -413,7 +440,7 @@ language sql security definer set search_path = public as $$
   delete from sched_push_subs where endpoint = any(endpoints);
 $$;
 
--- Everything to send now, marked as sent: [{ endpoint, p256dh, auth, title, body, date, tag }].
+-- Everything to send now, marked as sent: [{ endpoint, p256dh, auth, title, body, date, tag, who }].
 --   Reminders: a timed activity that starts within the device's remind_minutes (Greek time).
 --   Changes: queued by _sched_push_change, to the household's devices of other users.
 -- Both skip activities of people the device did not pick; family ones (nobody set) always go.
@@ -456,22 +483,24 @@ begin
                 else 'Σε ' || mins || case when mins = 1 then ' λεπτό' else ' λεπτά' end end
              || ' · ' || to_char(start_time, 'HH24:MI') || '–' || to_char(end_time, 'HH24:MI')
              || case when location <> '' then ' · ' || location else '' end as body,
-           on_date as date, 'r-' || event_id || '-' || on_date as tag, 0::bigint as ord
+           on_date as date, 'r-' || event_id || '-' || on_date as tag, 0::bigint as ord,
+           _sched_push_who(household_id, member_ids) as who
     from due
     union all
-    select s.endpoint, s.p256dh, s.auth, n.title, n.body, n.on_date, 'c-' || n.id, n.id
+    select s.endpoint, s.p256dh, s.auth, n.title, n.body, n.on_date, 'c-' || n.id, n.id,
+           _sched_push_who(n.household_id, n.who)
     from news n join sched_push_subs s on s.household_id = n.household_id
     where s.notify_changes and s.user_id is distinct from n.actor
       and (cardinality(s.member_ids) = 0 or cardinality(n.member_ids) = 0 or s.member_ids && n.member_ids)
   )
   select coalesce(json_agg(json_build_object('endpoint', endpoint, 'p256dh', p256dh, 'auth', auth, 'title', title,
-                                             'body', body, 'date', to_char(date, 'YYYY-MM-DD'), 'tag', tag)
+                                             'body', body, 'date', to_char(date, 'YYYY-MM-DD'), 'tag', tag, 'who', who)
                        order by ord, title), '[]')
   into out from msgs;
   return out;
 end $$;
 
-revoke all on function _sched_push_names(uuid, smallint[]), _sched_push_day(date), _sched_push_when(sched_events, date, boolean),
+revoke all on function _sched_push_who(uuid, smallint[]), _sched_push_names(uuid, smallint[]), _sched_push_day(date), _sched_push_when(sched_events, date, boolean),
   _sched_push_change(text, sched_events, smallint[], text), api_sched_push_key(), api_sched_push_get(text),
   api_sched_push_save(jsonb), api_sched_push_remove(text), sched_push_config_get(), sched_push_set_keys(text, jsonb),
   sched_push_gone(text[]), sched_push_due(timestamptz) from public, anon, authenticated;
@@ -483,7 +512,7 @@ begin
   if exists (select 1 from pg_roles where rolname = 'service_role') then
     grant select, insert, update, delete on sched_push_subs, sched_push_sent, sched_push_changes, sched_push_config to service_role;
     grant execute on function sched_push_config_get(), sched_push_set_keys(text, jsonb), sched_push_gone(text[]),
-      sched_push_due(timestamptz), _sched_push_names(uuid, smallint[]) to service_role;
+      sched_push_due(timestamptz), _sched_push_names(uuid, smallint[]), _sched_push_who(uuid, smallint[]) to service_role;
   end if;
 end $$;
 

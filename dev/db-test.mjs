@@ -302,6 +302,29 @@ assert.deepEqual(out, [
 ]);
 ok('push: change, cancel and delete texts');
 
+// Whose picture: children first, random between two; adults otherwise; nobody or everyone: the logo.
+const kids = [];
+for (const name of ['Παιδί Α', 'Παιδί Β']) kids.push((await rpc(A, 'api_sched_save_member', [{ name, color: '#eda100' }])).id);
+await db.exec(`update sched_members set child = true where name like 'Παιδί %'`);
+const all = (await db.query(`select array_agg(id) a from sched_members where household_id = '${H}' and not archived`)).rows[0].a;
+const who = async (ids) => (await db.query(`select _sched_push_who('${H}', $1::smallint[]) as r`, [ids])).rows[0].r;
+assert.equal(await who([]), null, 'nobody');
+assert.equal(await who(all), null, 'whole family');
+assert.equal((await who([m1, kids[0]])).id, kids[0], 'the child over the parent');
+assert.deepEqual(await who([m1]), { id: m1, name: 'Γιάννης', color: '#2a78d6', photo: false });
+const seen = new Set();
+for (let i = 0; i < 40; i++) seen.add((await who([m2, ...kids])).id);
+assert.deepEqual([...seen].sort(), [...kids].sort(), 'random between the two children, never a parent');
+seen.clear();
+for (let i = 0; i < 40; i++) seen.add((await who([m1, m2])).id);
+assert.equal(seen.size, 2, 'random between two without children');
+await asUser(U2, () => rpc('b@example.com', 'api_sched_push_save', [{ ...devB, remindMinutes: null, members: [], changes: true }]));
+await due('2026-11-01 08:00+02');
+await asUser(U1, () => rpc(A, 'api_sched_add', [{ title: 'Σχολείο', members: [m1, kids[1]], date: '2026-11-11', start: '08:00', end: '13:00' }]));
+out = (await due('2026-11-01 08:00+02')).filter((m) => m.endpoint === devB.endpoint);
+assert.equal(out[0].who.id, kids[1]);
+ok('push: picture and colour of the child, else the person, else the logo');
+
 await as(SVC, 'select sched_push_gone($1)', [[devB.endpoint]]);
 assert.equal(await rpc(A, 'api_sched_push_get', [devB.endpoint]), null);
 await rpc(A, 'api_sched_push_remove', [devA.endpoint]);
