@@ -20,14 +20,14 @@
     (function () {
       var root = document.documentElement, meta = document.querySelector('meta[name="theme-color"]');
       var dark = matchMedia('(prefers-color-scheme: dark)');
-      function paint() { meta.content = (root.dataset.theme || (dark.matches ? 'dark' : 'light')) === 'dark' ? '#1a1a19' : '#fffdf8'; }
+      function paint() { meta.content = (root.dataset.theme || (dark.matches ? 'dark' : 'light')) === 'dark' ? '#1b1a21' : '#fffdf8'; }
       paint();
       dark.addEventListener('change', paint);
       new MutationObserver(paint).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
     })();
   </script>
-  <link rel="stylesheet" href="css/style.css?v=40">
-  <script type="module" src="js/app.js?v=40"></script>
+  <link rel="stylesheet" href="css/style.css?v=41">
+  <script type="module" src="js/app.js?v=41"></script>
   <script>if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>
 </head>
 <body>
