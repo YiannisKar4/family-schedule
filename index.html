@@ -26,8 +26,8 @@
       new MutationObserver(paint).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
     })();
   </script>
-  <link rel="stylesheet" href="css/style.css?v=41">
-  <script type="module" src="js/app.js?v=41"></script>
+  <link rel="stylesheet" href="css/style.css?v=42">
+  <script type="module" src="js/app.js?v=42"></script>
   <script>if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>
 </head>
 <body>
@@ -154,6 +154,8 @@
         <button type="button" data-theme-opt="light">Φωτεινό</button>
         <button type="button" data-theme-opt="dark">Σκοτεινό</button>
       </div>
+      <h3 class="manage-h">Ειδοποιήσεις</h3>
+      <div id="push-box" class="push-box"></div>
       <h3 class="manage-h">Μέλη οικογένειας</h3>
       <p class="small muted">Πάτα τον κύκλο για φωτογραφία, το χρώμα για να διαλέξεις άλλο. Γράψε πάνω στο όνομα για μετονομασία.</p>
       <input type="file" id="photo-input" accept="image/*" hidden>

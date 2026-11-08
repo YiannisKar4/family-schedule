@@ -39,6 +39,9 @@ Family members: Γιάννης, Αθηνά, Πάνος, Νικόλας (Πάνο
 3. Supabase → Authentication → URL Configuration → Redirect URLs: add
    `https://yianniskar4.github.io/family-schedule/**` (keep the budget's).
 4. GitHub → Settings → Pages: deploy from `main`, `/ (root)`.
+5. Push notifications (added Nov 2026): re-run `schema.sql`, deploy the Edge Function `sched-push`
+   (dashboard editor, paste `supabase/functions/sched-push/index.ts`, JWT verification off),
+   then run `supabase/push-cron.sql`. See README "Push notifications".
 
 ## Sign-in email template
 
@@ -57,7 +60,7 @@ and is shared with the budget.
 Work on a branch, open a PR and merge it into `main` yourself, without asking: he said a mistake can be rolled back.
 Still answer questions with an answer, not with a change.
 
-See README.md. Before pushing: `npm run test:db`, `npm run test:expand`, and a look at the site in the
+See README.md. Before pushing: `npm run test:db`, `npm run test:expand`, `npm run test:push`, and a look at the site in the
 mock (`node dev/supabase-mock.mjs`, sign in as a@example.com, code at
 http://localhost:8091/__mail?email=a@example.com). After changing any `.js` or `.css`, raise every `?v=`.
 The site installs as an app (PWA): `manifest.json`, `icons/`, `sw.js`. The service worker caches only

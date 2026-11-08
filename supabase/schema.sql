@@ -225,6 +225,269 @@ begin
 end $$;
 
 
+-- ------------------------------------------------------ push notifications
+-- Each phone or computer that turns notifications on is one row in sched_push_subs, with that
+-- device's choices. The Edge Function supabase/functions/sched-push runs every minute (pg_cron,
+-- see supabase/push-cron.sql), asks sched_push_due() what to send and sends it with Web Push.
+-- Only the website functions below and the Edge Function (service_role) reach these tables.
+
+create table if not exists sched_push_subs (
+  id             bigint generated always as identity primary key,
+  household_id   uuid not null references households(id) on delete cascade,
+  user_id        uuid,
+  endpoint       text not null unique check (endpoint ~ '^https://'),
+  p256dh         text not null,
+  auth           text not null,
+  remind_minutes smallint check (remind_minutes between 1 and 1440), -- null: no reminders
+  member_ids     smallint[] not null default '{}',                     -- empty: everyone
+  notify_changes boolean not null default true,
+  created_at     timestamptz not null default now()
+);
+
+-- Reminders already sent, so each one goes out once.
+create table if not exists sched_push_sent (
+  sub_id   bigint not null references sched_push_subs(id) on delete cascade,
+  event_id uuid not null references sched_events(id) on delete cascade,
+  on_date  date not null,
+  sent_at  timestamptz not null default now(),
+  primary key (sub_id, event_id, on_date)
+);
+
+-- What someone added, changed or deleted, waiting to be sent to the others.
+create table if not exists sched_push_changes (
+  id           bigint generated always as identity primary key,
+  household_id uuid not null references households(id) on delete cascade,
+  actor        uuid,
+  member_ids   smallint[] not null default '{}',
+  title        text not null,
+  body         text not null,
+  on_date      date,
+  sent         boolean not null default false,
+  created_at   timestamptz not null default now()
+);
+
+-- One row: the secret the cron call carries, and the Web Push (VAPID) keys, which the
+-- Edge Function creates on its first run.
+create table if not exists sched_push_config (
+  id            boolean primary key default true check (id),
+  cron_secret   text not null default replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''),
+  vapid_public  text,
+  vapid_private jsonb
+);
+insert into sched_push_config default values on conflict do nothing;
+
+alter table sched_push_subs    enable row level security;
+alter table sched_push_sent    enable row level security;
+alter table sched_push_changes enable row level security;
+alter table sched_push_config  enable row level security;
+revoke all on sched_push_subs, sched_push_sent, sched_push_changes, sched_push_config from anon, authenticated;
+
+-- Member names for a notification title: "Πάνος, Νικόλας".
+create or replace function _sched_push_names(h uuid, ids smallint[]) returns text
+language sql stable set search_path = public as $$
+  select string_agg(name, ', ' order by sort_order, id) from sched_members where household_id = h and id = any(ids)
+$$;
+
+-- "Τρίτη 10 Νοεμβρίου"
+create or replace function _sched_push_day(d date) returns text
+language sql immutable as $$
+  select (array['Δευτέρα','Τρίτη','Τετάρτη','Πέμπτη','Παρασκευή','Σάββατο','Κυριακή'])[extract(isodow from d)::int]
+         || ' ' || extract(day from d)::int || ' '
+         || (array['Ιανουαρίου','Φεβρουαρίου','Μαρτίου','Απριλίου','Μαΐου','Ιουνίου','Ιουλίου','Αυγούστου',
+                   'Σεπτεμβρίου','Οκτωβρίου','Νοεμβρίου','Δεκεμβρίου'])[extract(month from d)::int]
+$$;
+
+-- When an event is, for the text of a notification:
+--   "Τρίτη 10 Νοεμβρίου · 17:00–18:00 · Γήπεδο"   (one date: d, or the event's own)
+--   "Κάθε Τρι, Πεμ · 17:00–18:00"                  (a series)
+--   "Από Τρίτη 10 Νοεμβρίου, κάθε Τρι · 17:00–18:00" (a series from d on)
+create or replace function _sched_push_when(e sched_events, d date default null, from_d boolean default false) returns text
+language plpgsql immutable as $$
+declare txt text;
+begin
+  if e.repeat_days is not null and (d is null or from_d) then
+    txt := 'κάθε ' || case when e.repeat_every > 1 then e.repeat_every || ' εβδομάδες: ' else '' end
+           || (select string_agg((array['Δευ','Τρι','Τετ','Πεμ','Παρ','Σαβ','Κυρ'])[x], ', ' order by x) from unnest(e.repeat_days) x);
+    txt := case when from_d then 'Από ' || _sched_push_day(d) || ', ' || txt else upper(left(txt, 1)) || substr(txt, 2) end;
+  elsif d is null and e.end_date > e.start_date then
+    txt := _sched_push_day(e.start_date) || ' – ' || _sched_push_day(e.end_date);
+  else
+    txt := _sched_push_day(coalesce(d, e.start_date));
+  end if;
+  txt := txt || ' · ' || case when e.start_time is null then 'όλη μέρα'
+                              else to_char(e.start_time, 'HH24:MI') || '–' || to_char(e.end_time, 'HH24:MI') end;
+  if e.location <> '' then txt := txt || ' · ' || e.location; end if;
+  return txt;
+end $$;
+
+-- Queues "someone added / changed / deleted this" for the household's other devices.
+-- Called by api_sched_add, api_sched_update and api_sched_delete.
+create or replace function _sched_push_change(kind text, e sched_events, members smallint[], what text) returns void
+language plpgsql security definer set search_path = public as $$
+declare h uuid := sched_household();
+begin
+  if h is null or h <> e.household_id then return; end if;
+  insert into sched_push_changes (household_id, actor, member_ids, title, body, on_date)
+  values (h, auth.uid(), coalesce(members, '{}'),
+          case kind when 'add' then 'Νέο' when 'cancel' then 'Ακυρώθηκε' when 'delete' then 'Διαγραφή' else 'Αλλαγή' end
+            || ': ' || e.title || coalesce(' · ' || _sched_push_names(h, e.member_ids), ''),
+          what, greatest(e.start_date, (now() at time zone 'Europe/Athens')::date));
+end $$;
+
+-- ---- website: this device's notifications
+
+-- The public Web Push key the browser needs to sign up: { key }. Null until the Edge Function has run once.
+drop function if exists api_sched_push_key();
+create or replace function api_sched_push_key() returns json
+language sql stable security definer set search_path = public as $$
+  select json_build_object('key', case when _sched_require() is not null then (select vapid_public from sched_push_config) end)
+$$;
+
+-- This device's choices, or null when it is not signed up (any more).
+create or replace function api_sched_push_get(endpoint text) returns json
+language sql stable security definer set search_path = public as $$
+  select json_build_object('remindMinutes', s.remind_minutes, 'members', to_json(s.member_ids), 'changes', s.notify_changes)
+  from sched_push_subs s where s.endpoint = api_sched_push_get.endpoint and s.household_id = _sched_require()
+$$;
+
+-- Signs this device up, or updates it. sub: { endpoint, p256dh, auth, remindMinutes, members, changes }.
+-- Choices left out keep their saved value (or the defaults: 30 minutes, everyone, changes on).
+create or replace function api_sched_push_save(sub jsonb) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  h uuid := _sched_require();
+  ep text := coalesce(sub ->> 'endpoint', '');
+  old sched_push_subs;
+  mins smallint;
+  mem smallint[];
+begin
+  if ep !~ '^https://' or coalesce(sub ->> 'p256dh', '') = '' or coalesce(sub ->> 'auth', '') = '' then
+    raise exception 'Μη έγκυρη συσκευή για ειδοποιήσεις';
+  end if;
+  select * into old from sched_push_subs s where s.endpoint = ep and s.household_id = h;
+  mins := case when sub ? 'remindMinutes' then nullif(sub ->> 'remindMinutes', '')::smallint
+               when old.id is not null then old.remind_minutes else 30 end;
+  if mins is not null and (mins < 1 or mins > 1440) then raise exception 'Μη έγκυρος χρόνος υπενθύμισης'; end if;
+  mem := case when sub ? 'members' then coalesce((select array_agg(distinct x::smallint order by x::smallint)
+                                                  from jsonb_array_elements_text(sub -> 'members') x), '{}')
+              else coalesce(old.member_ids, '{}') end;
+  if exists (select 1 from unnest(mem) m where not exists (select 1 from sched_members where household_id = h and id = m)) then
+    raise exception 'Άγνωστο μέλος';
+  end if;
+  insert into sched_push_subs as s (household_id, user_id, endpoint, p256dh, auth, remind_minutes, member_ids, notify_changes)
+  values (h, auth.uid(), ep, sub ->> 'p256dh', sub ->> 'auth', mins, mem,
+          coalesce((sub ->> 'changes')::boolean, old.notify_changes, true))
+  on conflict (endpoint) do update set household_id = excluded.household_id, user_id = excluded.user_id,
+    p256dh = excluded.p256dh, auth = excluded.auth, remind_minutes = excluded.remind_minutes,
+    member_ids = excluded.member_ids, notify_changes = excluded.notify_changes;
+  return json_build_object('ok', true);
+end $$;
+
+-- Stops notifications on this device.
+create or replace function api_sched_push_remove(endpoint text) returns json
+language plpgsql security definer set search_path = public as $$
+declare h uuid := _sched_require();
+begin
+  delete from sched_push_subs s where s.endpoint = api_sched_push_remove.endpoint and s.household_id = h;
+  return json_build_object('ok', true);
+end $$;
+
+-- ---- Edge Function only (service_role)
+
+create or replace function sched_push_config_get() returns json
+language sql stable security definer set search_path = public as $$
+  select json_build_object('cronSecret', cron_secret, 'vapidPublic', vapid_public, 'vapidPrivate', vapid_private)
+  from sched_push_config
+$$;
+
+-- Saves the keys the Edge Function made on its first run. Never replaces existing ones.
+create or replace function sched_push_set_keys(public_key text, private_key jsonb) returns json
+language sql security definer set search_path = public as $$
+  update sched_push_config set vapid_public = public_key, vapid_private = private_key where vapid_public is null;
+  select sched_push_config_get();
+$$;
+
+-- Devices the push service says are gone (app uninstalled, notifications turned off).
+create or replace function sched_push_gone(endpoints text[]) returns void
+language sql security definer set search_path = public as $$
+  delete from sched_push_subs where endpoint = any(endpoints);
+$$;
+
+-- Everything to send now, marked as sent: [{ endpoint, p256dh, auth, title, body, date, tag }].
+--   Reminders: a timed activity that starts within the device's remind_minutes (Greek time).
+--   Changes: queued by _sched_push_change, to the household's devices of other users.
+-- Both skip activities of people the device did not pick; family ones (nobody set) always go.
+create or replace function sched_push_due(at_time timestamptz default now()) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  now_local timestamp := at_time at time zone 'Europe/Athens';
+  today date := now_local::date;
+  out json;
+begin
+  delete from sched_push_sent where sent_at < now() - interval '3 days';
+  delete from sched_push_changes where sent and created_at < now() - interval '1 day';
+
+  with occ as (
+    select e.*, d as on_date, d + e.start_time as starts
+    from sched_events e, (values (today), (today + 1)) days(d)
+    where e.start_time is not null and not e.cancelled and e.start_date <= d
+      and case when e.repeat_days is null then e.start_date = d
+               else d <= coalesce(e.repeat_until, 'infinity'::date)
+                    and extract(isodow from d)::smallint = any(e.repeat_days)
+                    and ((d - (e.start_date - (extract(isodow from e.start_date)::int - 1))) / 7) % e.repeat_every = 0
+                    and not exists (select 1 from sched_skips k where k.event_id = e.id and k.on_date = d) end
+  ), due as (
+    select s.id as sub_id, s.endpoint, s.p256dh, s.auth, o.id as event_id, o.on_date, o.household_id,
+           o.title, o.member_ids, o.start_time, o.end_time, o.location,
+           ceil(extract(epoch from o.starts - now_local) / 60)::int as mins
+    from occ o join sched_push_subs s on s.household_id = o.household_id
+    where s.remind_minutes is not null
+      and o.starts > now_local and o.starts - make_interval(mins => s.remind_minutes) <= now_local
+      and (cardinality(s.member_ids) = 0 or cardinality(o.member_ids) = 0 or s.member_ids && o.member_ids)
+      and not exists (select 1 from sched_push_sent x where x.sub_id = s.id and x.event_id = o.id and x.on_date = o.on_date)
+  ), mark_sent as (
+    insert into sched_push_sent (sub_id, event_id, on_date) select sub_id, event_id, on_date from due on conflict do nothing
+  ), news as (
+    update sched_push_changes c set sent = true where not c.sent returning c.*
+  ), msgs as (
+    select endpoint, p256dh, auth,
+           title || coalesce(' · ' || _sched_push_names(household_id, member_ids), '') as title,
+           case when mins >= 60 and mins % 60 = 0 then 'Σε ' || (mins / 60) || case when mins = 60 then ' ώρα' else ' ώρες' end
+                else 'Σε ' || mins || case when mins = 1 then ' λεπτό' else ' λεπτά' end end
+             || ' · ' || to_char(start_time, 'HH24:MI') || '–' || to_char(end_time, 'HH24:MI')
+             || case when location <> '' then ' · ' || location else '' end as body,
+           on_date as date, 'r-' || event_id || '-' || on_date as tag, 0::bigint as ord
+    from due
+    union all
+    select s.endpoint, s.p256dh, s.auth, n.title, n.body, n.on_date, 'c-' || n.id, n.id
+    from news n join sched_push_subs s on s.household_id = n.household_id
+    where s.notify_changes and s.user_id is distinct from n.actor
+      and (cardinality(s.member_ids) = 0 or cardinality(n.member_ids) = 0 or s.member_ids && n.member_ids)
+  )
+  select coalesce(json_agg(json_build_object('endpoint', endpoint, 'p256dh', p256dh, 'auth', auth, 'title', title,
+                                             'body', body, 'date', to_char(date, 'YYYY-MM-DD'), 'tag', tag)
+                       order by ord, title), '[]')
+  into out from msgs;
+  return out;
+end $$;
+
+revoke all on function _sched_push_names(uuid, smallint[]), _sched_push_day(date), _sched_push_when(sched_events, date, boolean),
+  _sched_push_change(text, sched_events, smallint[], text), api_sched_push_key(), api_sched_push_get(text),
+  api_sched_push_save(jsonb), api_sched_push_remove(text), sched_push_config_get(), sched_push_set_keys(text, jsonb),
+  sched_push_gone(text[]), sched_push_due(timestamptz) from public, anon, authenticated;
+grant execute on function _sched_push_names(uuid, smallint[]), _sched_push_day(date), _sched_push_when(sched_events, date, boolean),
+  _sched_push_change(text, sched_events, smallint[], text), api_sched_push_key(), api_sched_push_get(text),
+  api_sched_push_save(jsonb), api_sched_push_remove(text) to authenticated;
+do $$
+begin
+  if exists (select 1 from pg_roles where rolname = 'service_role') then
+    grant select, insert, update, delete on sched_push_subs, sched_push_sent, sched_push_changes, sched_push_config to service_role;
+    grant execute on function sched_push_config_get(), sched_push_set_keys(text, jsonb), sched_push_gone(text[]),
+      sched_push_due(timestamptz), _sched_push_names(uuid, smallint[]) to service_role;
+  end if;
+end $$;
+
+
 -- ---------------------------------------------------------------- website API
 
 -- Members, categories and every event that can show up between `from` and `to` (dates, inclusive).
@@ -272,6 +535,7 @@ begin
   r.id := gen_random_uuid(); r.created_by := auth.uid(); r.created_at := now(); r.updated_at := now();
   r.repeat_every := coalesce(r.repeat_every, 1);
   insert into sched_events select r.*;
+  perform _sched_push_change('add', r, r.member_ids, _sched_push_when(r));
   return json_build_object('ok', true, 'id', r.id);
 end $$;
 
@@ -296,6 +560,8 @@ begin
            location = r.location, notes = r.notes, cancelled = r.cancelled, repeat_days = r.repeat_days, repeat_every = r.repeat_every,
            repeat_until = r.repeat_until
     where e.id = old.id;
+    perform _sched_push_change(case when r.cancelled and not old.cancelled then 'cancel' else 'update' end,
+                               r, old.member_ids || r.member_ids, _sched_push_when(r));
     return json_build_object('ok', true, 'id', old.id);
   end if;
 
@@ -306,6 +572,8 @@ begin
     r.repeat_days := null; r.repeat_until := null; r.repeat_every := 1;
     r.created_by := auth.uid(); r.created_at := now(); r.updated_at := now();
     insert into sched_events select r.*;
+    perform _sched_push_change(case when r.cancelled and not old.cancelled then 'cancel' else 'update' end,
+                               r, old.member_ids || r.member_ids, _sched_push_when(r));
     return json_build_object('ok', true, 'id', new_id);
   elsif scope = 'following' then
     if d <= old.start_date then
@@ -317,6 +585,8 @@ begin
     insert into sched_events select r.*;
     update sched_skips s set event_id = new_id where s.event_id = old.id and s.on_date >= d;
     update sched_events c set parent_id = new_id where c.parent_id = old.id and c.parent_date >= d;
+    perform _sched_push_change(case when r.cancelled and not old.cancelled then 'cancel' else 'update' end,
+                               r, old.member_ids || r.member_ids, _sched_push_when(r, d, true));
     return json_build_object('ok', true, 'id', new_id);
   end if;
   raise exception 'Άγνωστη επιλογή: %', scope;
@@ -333,15 +603,18 @@ begin
     d := _sched_date(on_date, 'ημέρα');
     if scope = 'one' then
       insert into sched_skips values (old.id, h, d) on conflict do nothing;
+      perform _sched_push_change('delete', old, old.member_ids, _sched_push_when(old, d));
       return json_build_object('ok', true, 'id', old.id);
     end if;
     if d > old.start_date then
       update sched_events e set repeat_until = d - 1 where e.id = old.id;
       delete from sched_events c where c.parent_id = old.id and c.parent_date >= d;
+      perform _sched_push_change('delete', old, old.member_ids, _sched_push_when(old, d, true));
       return json_build_object('ok', true, 'id', old.id);
     end if;
   end if;
   delete from sched_events e where e.id = old.id;
+  perform _sched_push_change('delete', old, old.member_ids, _sched_push_when(old));
   return json_build_object('ok', true, 'id', old.id);
 end $$;
 
