@@ -32,7 +32,10 @@ export function attachVoice(fab, { onText, onError }) {
   let timer = 0, open = false, held = false, rec = null, listening = false, heard = '', live = '', thinking = false;
 
   const buzz = (ms) => { try { navigator.vibrate?.(ms); } catch { /* not allowed */ } };
-  const show = () => { said.textContent = (heard + ' ' + live).trim(); };
+  const show = () => {
+    const t = (heard + ' ' + live).trim();
+    said.textContent = t.length > 220 ? `…${t.slice(-220)}` : t;
+  };
 
   function place() {
     const r = fab.getBoundingClientRect();
@@ -45,7 +48,7 @@ export function attachVoice(fab, { onText, onError }) {
   function openMenu() {
     open = true; held = true; heard = ''; live = '';
     place();
-    label.textContent = 'Σύρε το δάχτυλο στο μικρόφωνο';
+    label.textContent = 'Κράτα το δάχτυλο κάτω και σύρε το στο μικρόφωνο';
     show();
     document.documentElement.classList.add('vc-open');
     buzz(15);
@@ -61,28 +64,43 @@ export function attachVoice(fab, { onText, onError }) {
     if (listening) return;
     listening = true;
     document.documentElement.classList.add('vc-rec');
-    label.textContent = 'Ακούω…';
+    label.textContent = 'Ακούω… Άφησε το δάχτυλο όταν τελειώσεις';
     buzz(10);
-    rec = new SR();
-    rec.lang = 'el-GR';
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.onresult = (e) => {
-      live = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) heard = `${heard} ${e.results[i][0].transcript}`.trim();
-        else live += e.results[i][0].transcript;
-      }
+    rec = listen();
+  }
+
+  /**
+   * One phrase at a time (continuous off): Chrome on Android repeats earlier words when it runs
+   * continuously. Each phrase's text is rebuilt from its results, never added to, and kept when
+   * the phrase ends; while the finger is still on the microphone the next phrase starts.
+   */
+  function listen() {
+    const r = new SR();
+    r.lang = 'el-GR';
+    r.continuous = false;
+    r.interimResults = true;
+    let mine = '';
+    r.onresult = (e) => {
+      mine = [...e.results].map((x) => x[0].transcript).join(' ').replace(/\s+/g, ' ').trim();
+      live = mine;
       show();
     };
-    rec.onerror = (e) => {
+    r.onerror = (e) => {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         closeMenu();
         onError?.('Δώσε άδεια για το μικρόφωνο και δοκίμασε ξανά.');
       }
     };
-    rec.onend = () => { if (rec && listening && open) try { rec.start(); } catch { /* already running */ } };
-    try { rec.start(); } catch { /* already running */ }
+    r.onend = () => {
+      if (mine) heard = `${heard} ${mine}`.trim();
+      if (live === mine) live = '';
+      mine = '';
+      show();
+      if (rec === r && listening && open) rec = listen();
+      else if (r.done) r.done();
+    };
+    try { r.start(); } catch { /* already running */ }
+    return r;
   }
 
   function stopListening() {
@@ -116,7 +134,7 @@ export function attachVoice(fab, { onText, onError }) {
       if (text) onText(text);
       else onError?.('Δεν ακούστηκε τίποτα. Δοκίμασε ξανά.');
     };
-    r.onend = end;
+    r.done = end;
     setTimeout(end, 1200);
     try { r.stop(); } catch { end(); }
   }

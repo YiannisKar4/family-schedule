@@ -1,17 +1,17 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=44';
-import * as api from './api.js?v=44';
-import * as live from './live.js?v=44';
-import * as push from './push.js?v=44';
-import { ApiError } from './api.js?v=44';
-import { STORAGE_PREFIX } from './config.js?v=44';
-import { attachPlaces, attachSuggest } from './places.js?v=44';
-import { attachPicker, closePicker, closeOnOutside } from './pickers.js?v=44';
-import { attachVoice } from './voice.js?v=44';
+import * as supa from './supa.js?v=45';
+import * as api from './api.js?v=45';
+import * as live from './live.js?v=45';
+import * as push from './push.js?v=45';
+import { ApiError } from './api.js?v=45';
+import { STORAGE_PREFIX } from './config.js?v=45';
+import { attachPlaces, attachSuggest } from './places.js?v=45';
+import { attachPicker, closePicker, closeOnOutside } from './pickers.js?v=45';
+import { attachVoice } from './voice.js?v=45';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=44';
+} from './dates.js?v=45';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
