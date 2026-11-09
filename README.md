@@ -96,6 +96,28 @@ Setting it up: run `schema.sql` again; Supabase → **Edge Functions** → **Dep
 then run [`supabase/push-cron.sql`](supabase/push-cron.sql) in the SQL Editor. Within a minute the keys exist
 and each device can turn notifications on in Ρυθμίσεις. To stop: `select cron.unschedule('sched-push');`.
 
+## Dictation (Gemini)
+
+On Android, hold the **+** button: a microphone rises above it. Slide the finger onto it and speak
+(«Ποδόσφαιρο ο Πάνος την Τρίτη 6 με 7 και μισή»), then let go. The «Νέα δραστηριότητα» window opens filled
+in; nothing is saved until Αποθήκευση. A short tap on + works as before. Not shown on iPhone / iPad or in
+browsers without speech recognition.
+
+```
+phone's speech recognition ──► text ──► Edge Function sched-ai ──► Google Gemini ──► fields ──► the window
+```
+
+- [`js/voice.js`](js/voice.js): the hold, the microphone and the browser's speech recognition (`el-GR`).
+- [`supabase/functions/sched-ai/index.ts`](supabase/functions/sched-ai/index.ts): only signed-in family
+  members (`sched_household()`); sends the words with the family's names, categories, used titles and a
+  dated calendar of the next five weeks; keeps only known names and valid dates/times. `npm run test:ai`.
+- Free Gemini API tier (Google may use the text to improve its models). Model: `gemini-flash-lite-latest`,
+  or the `GEMINI_MODEL` secret.
+
+Setting it up: get a key at https://aistudio.google.com/apikey; Supabase → **Edge Functions** → **Secrets**:
+add `GEMINI_API_KEY`; **Deploy a new function** → **Via Editor**, name `sched-ai`, paste `index.ts`, deploy,
+and turn off JWT verification for it (it checks the sign-in itself).
+
 ## Setting it up (once)
 
 1. Supabase dashboard → **SQL Editor** → paste all of [`supabase/schema.sql`](supabase/schema.sql) → **Run**.

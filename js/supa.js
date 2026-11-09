@@ -1,6 +1,6 @@
 // A small Supabase client: email sign-in (code or magic link) and calls to the api_* functions.
 // It uses Supabase's REST endpoints directly, so the site needs no extra library.
-import { SUPABASE_URL, SUPABASE_ANON_KEY, SESSION_KEY } from './config.js?v=43';
+import { SUPABASE_URL, SUPABASE_ANON_KEY, SESSION_KEY } from './config.js?v=44';
 
 
 export class AuthError extends Error {}
@@ -162,6 +162,29 @@ export async function rpc(fn, args = {}, retried = false) {
     if (msg === 'unauthorized') throw new AuthError('no-access');
     throw new Error(msg);
   }
+  return data;
+}
+
+/** Calls one of this site's Supabase Edge Functions. Retries once after refreshing an expired login. */
+export async function fn(name, body = {}, retried = false) {
+  const t = await token();
+  let res;
+  try {
+    res = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${t}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error('Δεν υπάρχει σύνδεση. Έλεγξε το internet.');
+  }
+  const data = await res.json().catch(() => null);
+  if (res.status === 401 && !retried) {
+    await refresh();
+    return fn(name, body, true);
+  }
+  if (res.status === 404) throw new Error('Η υπαγόρευση δεν έχει ρυθμιστεί ακόμα στο Supabase.');
+  if (!res.ok) throw new Error((data && data.error) || `Σφάλμα (${res.status})`);
   return data;
 }
 

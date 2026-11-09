@@ -6,7 +6,8 @@
     "test:db": "node dev/db-test.mjs",
     "test:expand": "node dev/expand-test.mjs",
     "dev": "node dev/supabase-mock.mjs",
-    "test:push": "node --experimental-strip-types --no-warnings dev/push-test.mjs"
+    "test:push": "node --experimental-strip-types --no-warnings dev/push-test.mjs",
+    "test:ai": "node --experimental-strip-types --no-warnings dev/ai-test.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.2.17",

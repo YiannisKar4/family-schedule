@@ -1,16 +1,17 @@
 // Family schedule: week and month calendar, quick add, weekly series.
-import * as supa from './supa.js?v=43';
-import * as api from './api.js?v=43';
-import * as live from './live.js?v=43';
-import * as push from './push.js?v=43';
-import { ApiError } from './api.js?v=43';
-import { STORAGE_PREFIX } from './config.js?v=43';
-import { attachPlaces, attachSuggest } from './places.js?v=43';
-import { attachPicker, closePicker, closeOnOutside } from './pickers.js?v=43';
+import * as supa from './supa.js?v=44';
+import * as api from './api.js?v=44';
+import * as live from './live.js?v=44';
+import * as push from './push.js?v=44';
+import { ApiError } from './api.js?v=44';
+import { STORAGE_PREFIX } from './config.js?v=44';
+import { attachPlaces, attachSuggest } from './places.js?v=44';
+import { attachPicker, closePicker, closeOnOutside } from './pickers.js?v=44';
+import { attachVoice } from './voice.js?v=44';
 import {
   today, addDays, addMonths, weekStart, monthGrid, weekday, minutes, pad, diffDays,
   expand, lanes, DAY_SHORT, DAY_LETTER, DAY_LONG, monthName, longDate, shortDate, rangeLabel,
-} from './dates.js?v=43';
+} from './dates.js?v=44';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -580,6 +581,59 @@ function openEvent({ ev = null, date = null, start = null } = {}) {
   syncTitle();
   syncMap();
   $('#event-dlg').showModal();
+}
+
+/**
+ * Dictation (hold +): Gemini reads the sentence, and the «Νέα δραστηριότητα» window opens filled in.
+ * Nothing is saved until Αποθήκευση.
+ */
+async function understandSpeech(text, voice) {
+  if (!state.data) return;
+  const members = state.data.members.filter((m) => !m.hidden);
+  const cats = state.data.categories.filter((c) => !c.hidden);
+  voice.busy(true);
+  let r;
+  try {
+    r = await api.understand({
+      text, today: today(),
+      members: members.map((m) => m.name),
+      categories: cats.map((c) => c.name),
+      titles: state.data.titles.map((t) => t.title).slice(0, 40),
+    });
+  } catch (e) {
+    toast(e.message, true);
+    return;
+  } finally {
+    voice.busy(false);
+  }
+  openEvent({ date: r.date });
+  const cat = cats.find((c) => c.name === r.category);
+  form.category = cat ? cat.id : null;
+  if (r.members.length) form.members = members.filter((m) => r.members.includes(m.name)).map((m) => m.id);
+  syncTitle();
+  const titled = !cat || needsTitle(cat.id);
+  if (titled) $('#f-title').value = r.title;
+  // The usual details of this kind of activity fill what was not said.
+  applyTemplate(titled ? r.title : cat.name);
+  if (r.start) {
+    $('#f-allday').checked = false;
+    $('#f-start').value = r.start;
+    $('#f-end').value = r.end || plusHour(r.start);
+    state.timeTouched = true;
+  } else if (!$('#f-start').value) {
+    $('#f-allday').checked = true;
+  }
+  if (r.endDate) $('#f-end-date').value = r.endDate;
+  if (r.repeatDays.length) {
+    form.repeat = r.repeatEvery;
+    form.days = r.repeatDays;
+    $('#f-until').value = r.repeatUntil;
+  }
+  if (r.location) $('#f-location').value = r.location;
+  if (r.notes) $('#f-notes').value = r.notes;
+  syncAllDay();
+  syncTitle();
+  syncMap();
 }
 
 /**
@@ -1157,6 +1211,7 @@ function init() {
   });
   $('#refresh').addEventListener('click', () => fetchData());
   $('#fab').addEventListener('click', () => openEvent());
+  const voice = attachVoice($('#fab'), { onText: (t) => understandSpeech(t, voice), onError: (m) => toast(m, true) });
 
   $('#people').addEventListener('click', (e) => {
     const b = e.target.closest('.person');

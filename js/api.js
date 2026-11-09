@@ -1,5 +1,5 @@
 // Calls the api_sched_* functions in the database, with readable errors.
-import * as supa from './supa.js?v=43';
+import * as supa from './supa.js?v=44';
 
 export class ApiError extends Error {
   constructor(message, code = '') {
@@ -8,9 +8,9 @@ export class ApiError extends Error {
   }
 }
 
-async function rpc(fn, args) {
+async function rpc(fn, args, call = supa.rpc) {
   try {
-    return await supa.rpc(fn, args);
+    return await call(fn, args);
   } catch (e) {
     if (e.message === 'login-required') throw new ApiError('Η σύνδεση έληξε. Συνδέσου ξανά με το email σου.', 'login-required');
     if (e.message === 'no-access') throw new ApiError(`Το email ${supa.userEmail()} δεν έχει πρόσβαση.`, 'no-access');
@@ -30,3 +30,4 @@ export const pushKey = () => rpc('api_sched_push_key', {});
 export const pushGet = (endpoint) => rpc('api_sched_push_get', { endpoint });
 export const pushSave = (sub) => rpc('api_sched_push_save', { sub });
 export const pushRemove = (endpoint) => rpc('api_sched_push_remove', { endpoint });
+export const understand = (ask) => rpc('sched-ai', ask, supa.fn);

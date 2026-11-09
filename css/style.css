@@ -247,6 +247,43 @@ h2 { font-size: 16px; margin: 0; }
 .fab svg { width: 22px; height: 22px; }
 @media (min-width: 820px) { .fab { bottom: 24px; right: 24px; } }
 
+/* Hold + for dictation (js/voice.js): a microphone rises above it; slide onto it to speak. */
+.fab.vc-fab { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.fab.vc-fab svg { transition: transform 0.25s ease; }
+html.vc-open .fab.vc-fab { transform: scale(0.92); }
+html.vc-open .fab.vc-fab svg { transform: rotate(45deg); }
+.vc-scrim { position: fixed; inset: 0; z-index: 23; background: rgba(20, 16, 10, 0.28); opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
+html.vc-open .vc-scrim { opacity: 1; }
+.vc-mic {
+  position: fixed; z-index: 24; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--surface-2); color: var(--accent); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22); pointer-events: none;
+  opacity: 0; transform: translateY(80px) scale(0.4);
+  transition: transform 0.32s cubic-bezier(.34, 1.56, .64, 1), opacity 0.18s ease, background-color 0.2s ease, color 0.2s ease;
+}
+.vc-mic svg { width: 24px; height: 24px; }
+html.vc-open .vc-mic { opacity: 1; transform: none; }
+html.vc-rec .vc-mic { transform: scale(1.25); background: var(--critical); color: #fff; }
+.vc-mic::before, .vc-mic::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--critical); opacity: 0; }
+html.vc-rec .vc-mic::before { animation: vc-ring 1.4s ease-out infinite; }
+html.vc-rec .vc-mic::after { animation: vc-ring 1.4s ease-out 0.7s infinite; }
+@keyframes vc-ring { from { transform: scale(1); opacity: 0.7; } to { transform: scale(1.9); opacity: 0; } }
+.vc-bubble {
+  position: fixed; z-index: 24; right: 16px; width: min(320px, calc(100vw - 32px)); min-height: 44px; padding: 10px 12px;
+  border-radius: 16px; background: var(--surface-2); color: var(--text-primary); font-size: 15px; line-height: 1.35;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2); pointer-events: none;
+  opacity: 0; transform: translateY(8px); transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.vc-bubble small { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 2px; }
+html.vc-rec .vc-bubble small { color: var(--critical); }
+html.vc-open .vc-bubble, html.vc-busy .vc-bubble { opacity: 1; transform: none; }
+html.vc-busy .vc-bubble small::after { content: ""; display: inline-block; width: 10px; height: 10px; margin-left: 6px; vertical-align: -1px;
+  border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: vc-spin 0.8s linear infinite; }
+@keyframes vc-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .vc-mic, .vc-bubble { transition-duration: 0.01s; }
+  html.vc-rec .vc-mic::before, html.vc-rec .vc-mic::after, html.vc-busy .vc-bubble small::after { animation: none; }
+}
+
 /* ---------- dialog ---------- */
 dialog {
   border: 0; padding: 0; border-radius: 18px; width: min(520px, calc(100vw - 24px));
