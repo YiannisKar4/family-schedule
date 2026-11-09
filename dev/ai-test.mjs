@@ -15,6 +15,7 @@ assert.match(p, /Δευτέρα 2026-11-09 \(σήμερα\)/);
 assert.match(p, /Τρίτη 2026-11-10 \(αύριο\)/);
 assert.match(p, /Κυριακή 2026-12-13/);
 assert.match(p, /Γιάννης, Αθηνά, Πάνος, Νικόλας/);
+assert.match(p, /μοιάζει στον ήχο/);
 console.log('  ✓ prompt: names, categories and a dated calendar from today');
 
 const c = clean({ category: 'Ποδόσφαιρο', title: 'x', members: ['Πάνος', 'Μαρία', 'Πάνος'], date: '2026-11-10', start: '6:00', end: '5:30',
