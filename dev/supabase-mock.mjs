@@ -299,6 +299,23 @@ http.createServer(async (req, res) => {
     return reply(204, '');
   }
 
+  // The dictation function (supabase/functions/sched-ai), without Gemini: a fixed reading of the
+  // words, enough to see the window fill in. Names and categories said are picked up as they are.
+  if (url.pathname === '/functions/v1/sched-ai' && req.method === 'POST') {
+    const claims = readJwt(req.headers.authorization);
+    if (!claims || claims === 'expired' || claims === 'invalid') return reply(401, { error: 'Η σύνδεση έληξε. Συνδέσου ξανά.' });
+    const a = body;
+    const t = (a.text || '').toLowerCase();
+    const d = new Date(`${a.today}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + 1);
+    const timed = /\d/.test(t);
+    return reply(200, {
+      category: a.categories.find((c) => t.includes(c.toLowerCase())) || '', title: '',
+      members: a.members.filter((m) => t.includes(m.toLowerCase())), date: d.toISOString().slice(0, 10),
+      allDay: !timed, start: timed ? '18:00' : '', end: timed ? '19:30' : '', endDate: '',
+      repeatDays: t.includes('κάθε') ? [2, 4] : [], repeatEvery: 1, repeatUntil: '', location: '', notes: '',
+    });
+  }
+
   const rpc = /^\/rest\/v1\/rpc\/(\w+)$/.exec(url.pathname);
   if (rpc && req.method === 'POST') {
     const claims = readJwt(req.headers.authorization);
